@@ -1,0 +1,126 @@
+# ------------------------------------------------------------
+# .NET MAUI / Visual Studio - baseline
+# Based on GitHub's official VisualStudio.gitignore,
+# trimmed for a practical app repository.
+# ------------------------------------------------------------
+ 
+# User-specific files
+*.rsuser
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.userprefs
+ 
+# Environment / secrets
+*.env
+.env
+.env.*
+!.env.example
+!.env.template
+ 
+# Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Ww][Ii][Nn]32/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+[Aa][Rr][Mm]64[Ee][Cc]/
+bld/
+[Bb]in/
+[Oo]bj/
+[Oo]ut/
+[Ll]og/
+[Ll]ogs/
+artifacts/
+ 
+# Build results in nested folders
+**/[Bb]in/*
+**/[Oo]bj/*
+**/[Ll]og/*
+**/[Ll]ogs/*
+ 
+# Visual Studio
+.vs/
+Generated\ Files/
+Generated/
+ 
+# Rider / ReSharper / dotCover / NCrunch
+_ReSharper*/
+*.[Rr]e[Ss]harper
+*.DotSettings.user
+*.dotCover
+_NCrunch_*
+.*crunch*.local.xml
+nCrunchTemp_*
+ 
+# Test results
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+*.trx
+TestResult.xml
+nunit-*.xml
+BenchmarkDotNet.Artifacts/
+ 
+# NuGet / packages
+*.nupkg
+**/packages/*
+!**/packages/build/
+*.snupkg
+ 
+# Publish / deployment artifacts
+publish/
+*.publishproj
+*.pubxml
+*.publish.xml
+*.azurePubxml
+PublishScripts/
+ 
+# OS / editor noise
+.DS_Store
+Thumbs.db
+desktop.ini
+ 
+# Visual Studio Code
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/launch.json
+!.vscode/tasks.json
+ 
+# JetBrains
+.idea/
+ 
+# Temporary / backup files
+*.tmp
+*.temp
+*.bak
+*.orig
+*.cache
+ 
+# Local temporal files
+tmp/
+temp/
+scratch/
+ 
+# Secrets / keys / credentials
+secrets/
+private/
+credentials/
+*.key
+*.pem
+*.pfx
+*.cer
+*.crt
+*.jks
+*.keystore
+*.mobileprovision
+ 
+# Local databases / diagnostics (if used)
+*.db
+*.db-shm
+*.db-wal
