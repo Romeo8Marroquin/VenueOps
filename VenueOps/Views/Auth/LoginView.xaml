@@ -4,9 +4,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:vm="clr-namespace:VenueOps.ViewModels"
     x:Class="VenueOps.Views.Auth.LoginView"
-    x:DataType="vm:LoginViewModel"
-    Shell.NavBarIsVisible="False"
-    Shell.TabBarIsVisible="False">
+    x:DataType="vm:LoginViewModel">
 
     <ScrollView>
         <Grid MinimumHeightRequest="600">
@@ -14,8 +12,8 @@
             <!-- Full-screen background -->
             <Grid.Background>
                 <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                    <GradientStop Color="{AppThemeBinding Light=#E8F5EE, Dark=#091413}" Offset="0"/>
-                    <GradientStop Color="{AppThemeBinding Light=#F0F8F4, Dark=#0F1F1C}" Offset="1"/>
+                    <GradientStop Color="{AppThemeBinding Light={StaticResource PageGradientStartLight}, Dark={StaticResource BackgroundDark}}" Offset="0"/>
+                    <GradientStop Color="{AppThemeBinding Light={StaticResource BackgroundLight}, Dark={StaticResource SurfaceDark}}" Offset="1"/>
                 </LinearGradientBrush>
             </Grid.Background>
 

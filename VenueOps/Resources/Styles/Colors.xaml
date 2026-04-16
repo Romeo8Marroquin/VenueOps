@@ -23,6 +23,8 @@
     <Color x:Key="BrandLight">#B0E4CC</Color>
 
     <!-- ── Backgrounds ──────────────────────────────────── -->
+    <!-- Light: slightly lighter off-white — gradient top for auth pages -->
+    <Color x:Key="PageGradientStartLight">#E8F5EE</Color>
     <!-- Light: off-white with barely-perceptible green warmth -->
     <Color x:Key="BackgroundLight">#F0F8F4</Color>
     <!-- Light: pure white for elevated cards / sheets -->

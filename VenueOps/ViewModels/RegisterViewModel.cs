@@ -68,7 +68,7 @@ public partial class RegisterViewModel : BaseViewModel
 
         try
         {
-            var request = new RegisterRequest
+            RegisterRequest request = new()
             {
                 Name                 = Name,
                 Email                = Email,
@@ -76,7 +76,7 @@ public partial class RegisterViewModel : BaseViewModel
                 PasswordConfirmation = PasswordConfirmation
             };
 
-            var response = await _authService.RegisterAsync(request);
+            RegisterResponse? response = await _authService.RegisterAsync(request);
 
             if (response is not null)
             {

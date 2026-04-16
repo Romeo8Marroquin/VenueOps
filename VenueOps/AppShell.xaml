@@ -5,19 +5,21 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:dashboard="clr-namespace:VenueOps.Views.Dashboard"
     FlyoutBackgroundColor="{AppThemeBinding Light={StaticResource SurfaceLight}, Dark={StaticResource SurfaceDark}}"
+    FlyoutWidth="200"
     Title="VenueOps">
 
     <!-- ── Flyout Header ───────────────────────────────────── -->
     <Shell.FlyoutHeader>
         <Grid
-            HeightRequest="130"
-            Padding="20,0,20,20"
+            HeightRequest="80"
+            HorizontalOptions="Center"
             BackgroundColor="{AppThemeBinding Light={StaticResource BrandDark}, Dark={StaticResource SurfaceDark}}">
-            <VerticalStackLayout VerticalOptions="End" Spacing="2">
+            <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="2">
                 <Label
                     Text="VenueOps"
                     FontFamily="OpenSansSemibold"
                     FontSize="22"
+                    HorizontalTextAlignment="Center"
                     TextColor="{StaticResource BrandLight}"/>
                 <Label
                     Text="Operations Dashboard"
