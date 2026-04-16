@@ -2,11 +2,11 @@ using VenueOps.ViewModels;
 
 namespace VenueOps.Views.Auth;
 
-public partial class LoginView : ContentPage
+public partial class RegisterView : ContentPage
 {
     private const double MaxCardWidth = 560;
 
-    public LoginView(LoginViewModel viewModel)
+    public RegisterView(RegisterViewModel viewModel)
     {
         InitializeComponent();
         BindingContext = viewModel;
@@ -18,5 +18,4 @@ public partial class LoginView : ContentPage
         if (width > 0)
             ContentLayout.WidthRequest = Math.Min(width, MaxCardWidth);
     }
-
 }

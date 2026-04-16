@@ -78,6 +78,11 @@ public partial class LoginViewModel : BaseViewModel
         }
     }
 
+    // ── Navigation ──────────────────────────────────────────────────────────
+
+    [RelayCommand]
+    private Task NavigateToRegisterAsync() => _navigationService.NavigateToRegisterAsync();
+
     // Notify the login command's CanExecute when IsBusy flips
     protected override void OnBusyStateChanged(bool isBusy)
         => LoginCommand.NotifyCanExecuteChanged();

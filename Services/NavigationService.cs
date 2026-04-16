@@ -3,7 +3,7 @@ using VenueOps.Views.Auth;
 namespace VenueOps.Services;
 
 /// <summary>
-/// Handles root-level page switches (Login ↔ Authenticated shell).
+/// Handles root-level page switches (Login ↔ Register ↔ Authenticated shell).
 /// Keeps ViewModels free of direct Application / Window / Shell references.
 ///
 /// Uses Window.Page (MAUI 9+ pattern) instead of the deprecated
@@ -24,6 +24,13 @@ public sealed class NavigationService(IServiceProvider serviceProvider) : INavig
     {
         // LoginView is Transient — produces a fresh ViewModel on every call.
         Application.Current!.Windows[0].Page = _serviceProvider.GetRequiredService<LoginView>();
+        return Task.CompletedTask;
+    }
+
+    public Task NavigateToRegisterAsync()
+    {
+        // RegisterView is Transient — produces a fresh ViewModel on every call.
+        Application.Current!.Windows[0].Page = _serviceProvider.GetRequiredService<RegisterView>();
         return Task.CompletedTask;
     }
 }

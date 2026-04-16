@@ -37,16 +37,19 @@ public static class MauiProgram
         // ── Services (Singleton) ──────────────────────────────────────────────
         builder.Services.AddSingleton<IAuthService, AuthService>();
         builder.Services.AddSingleton<INavigationService, NavigationService>();
+        builder.Services.AddSingleton<IDialogService, DialogService>();
 
         // ── Shell (Singleton) ─────────────────────────────────────────────────
         builder.Services.AddSingleton<AppShell>();
 
         // ── ViewModels (Transient) ────────────────────────────────────────────
         builder.Services.AddTransient<LoginViewModel>();
+        builder.Services.AddTransient<RegisterViewModel>();
         builder.Services.AddTransient<DashboardViewModel>();
 
         // ── Views (Transient) ─────────────────────────────────────────────────
         builder.Services.AddTransient<LoginView>();
+        builder.Services.AddTransient<RegisterView>();
         builder.Services.AddTransient<DashboardView>();
 
         // ── Entry handler — remove platform-native borders / underlines ───────
