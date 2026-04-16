@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:vm="clr-namespace:VenueOps.ViewModels"
+    x:Class="VenueOps.Views.Dashboard.DashboardView"
+    x:DataType="vm:DashboardViewModel"
+    Title="Dashboard">
+
+    <Grid Padding="24">
+        <VerticalStackLayout Spacing="16" VerticalOptions="Center">
+
+            <!-- Welcome heading -->
+            <Label
+                Text="Welcome to VenueOps"
+                Style="{StaticResource Headline}"
+                HorizontalOptions="Center"
+                SemanticProperties.HeadingLevel="Level1"/>
+
+            <Label
+                Text="Your operations dashboard is ready."
+                Style="{StaticResource BodySecondary}"
+                HorizontalOptions="Center"
+                HorizontalTextAlignment="Center"/>
+
+            <!-- Placeholder content card -->
+            <Border Style="{StaticResource Card}" Margin="0,16,0,0">
+                <Label
+                    Text="Dashboard content coming soon..."
+                    Style="{StaticResource BodySecondary}"
+                    HorizontalOptions="Center"
+                    HorizontalTextAlignment="Center"/>
+            </Border>
+
+            <!-- Sign Out -->
+            <Button
+                Text="Sign Out"
+                Command="{Binding LogoutCommand}"
+                Style="{StaticResource OutlineButton}"
+                Margin="0,32,0,0"
+                AutomationId="LogoutButton"/>
+
+        </VerticalStackLayout>
+    </Grid>
+
+</ContentPage>

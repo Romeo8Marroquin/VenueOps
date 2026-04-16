@@ -1,17 +1,26 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using VenueOps.Views.Auth;
 
-namespace VenueOps
+namespace VenueOps;
+
+public partial class App : Application
 {
-    public partial class App : Application
-    {
-        public App()
-        {
-            InitializeComponent();
-        }
+    private readonly IServiceProvider _serviceProvider;
 
-        protected override Window CreateWindow(IActivationState? activationState)
-        {
-            return new Window(new AppShell());
-        }
+    public App(IServiceProvider serviceProvider)
+    {
+        _serviceProvider = serviceProvider;
+        // InitializeComponent() processes App.xaml and loads all merged
+        // ResourceDictionaries (Colors.xaml, Styles.xaml) into the app resources.
+        // This MUST happen before any page calls InitializeComponent() and tries
+        // to resolve StaticResource keys defined in those dictionaries.
+        InitializeComponent();
+    }
+
+    protected override Window CreateWindow(IActivationState? activationState)
+    {
+        // Called by the MAUI platform AFTER our constructor completes,
+        // so App.xaml resources are fully loaded before LoginView is created.
+        // LoginView is Transient → fresh ViewModel state on every call.
+        return new Window(_serviceProvider.GetRequiredService<LoginView>());
     }
 }

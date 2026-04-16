@@ -1,44 +1,82 @@
-﻿<?xml version="1.0" encoding="UTF-8" ?>
-<ResourceDictionary 
+<?xml version="1.0" encoding="UTF-8" ?>
+<ResourceDictionary
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
 
-    <!-- Note: For Android please see also Platforms\Android\Resources\values\colors.xml -->
+    <!--
+        VenueOps Brand Palette
+        ─────────────────────────────────────────────────────────────────
+        Brand greens  │ #285A48  BrandDark   deep forest green
+                      │ #408A71  BrandMid    medium green
+                      │ #B0E4CC  BrandLight  mint
+        ─────────────────────────────────────────────────────────────────
+        Light mode bg │ #F0F8F4  off-white (HSL 150°·18%·96%) — not
+                      │          pure white; faint green warmth
+        Dark mode bg  │ #091413  near-black with deep teal undertone
+        ─────────────────────────────────────────────────────────────────
+        Note: Android status bar colour → Platforms\Android\Resources\values\colors.xml
+    -->
 
-    <Color x:Key="Primary">#512BD4</Color>
-    <Color x:Key="PrimaryDark">#ac99ea</Color>
-    <Color x:Key="PrimaryDarkText">#242424</Color>
-    <Color x:Key="Secondary">#DFD8F7</Color>
-    <Color x:Key="SecondaryDarkText">#9880e5</Color>
-    <Color x:Key="Tertiary">#2B0B98</Color>
+    <!-- ── Brand ────────────────────────────────────────── -->
+    <Color x:Key="BrandDark">#285A48</Color>
+    <Color x:Key="BrandMid">#408A71</Color>
+    <Color x:Key="BrandLight">#B0E4CC</Color>
 
-    <Color x:Key="White">White</Color>
-    <Color x:Key="Black">Black</Color>
-    <Color x:Key="Magenta">#D600AA</Color>
-    <Color x:Key="MidnightBlue">#190649</Color>
-    <Color x:Key="OffBlack">#1f1f1f</Color>
+    <!-- ── Backgrounds ──────────────────────────────────── -->
+    <!-- Light: off-white with barely-perceptible green warmth -->
+    <Color x:Key="BackgroundLight">#F0F8F4</Color>
+    <!-- Light: pure white for elevated cards / sheets -->
+    <Color x:Key="SurfaceLight">#FFFFFF</Color>
+    <!-- Dark: near-black teal -->
+    <Color x:Key="BackgroundDark">#091413</Color>
+    <!-- Dark: slightly elevated surface (cards, bottom sheets) -->
+    <Color x:Key="SurfaceDark">#0F1F1C</Color>
+    <!-- Dark: nested surface variant (e.g. input inside a card) -->
+    <Color x:Key="SurfaceVariantDark">#162922</Color>
 
-    <Color x:Key="Gray100">#E1E1E1</Color>
-    <Color x:Key="Gray200">#C8C8C8</Color>
-    <Color x:Key="Gray300">#ACACAC</Color>
-    <Color x:Key="Gray400">#919191</Color>
-    <Color x:Key="Gray500">#6E6E6E</Color>
-    <Color x:Key="Gray600">#404040</Color>
-    <Color x:Key="Gray900">#212121</Color>
-    <Color x:Key="Gray950">#141414</Color>
+    <!-- ── Text ─────────────────────────────────────────── -->
+    <!-- Light: near-black with green undertone — softer than #000 -->
+    <Color x:Key="TextPrimaryLight">#0D1A16</Color>
+    <!-- Light: muted dark-green for labels, captions, placeholders -->
+    <Color x:Key="TextSecondaryLight">#3D5C50</Color>
+    <!-- Dark: off-white with faint green warmth -->
+    <Color x:Key="TextPrimaryDark">#E6F4EE</Color>
+    <!-- Dark: mint for secondary text, captions -->
+    <Color x:Key="TextSecondaryDark">#B0E4CC</Color>
 
-    <SolidColorBrush x:Key="PrimaryBrush" Color="{StaticResource Primary}"/>
-    <SolidColorBrush x:Key="SecondaryBrush" Color="{StaticResource Secondary}"/>
-    <SolidColorBrush x:Key="TertiaryBrush" Color="{StaticResource Tertiary}"/>
-    <SolidColorBrush x:Key="WhiteBrush" Color="{StaticResource White}"/>
-    <SolidColorBrush x:Key="BlackBrush" Color="{StaticResource Black}"/>
+    <!-- ── Borders & Dividers ────────────────────────────── -->
+    <Color x:Key="BorderLight">#C8EDD9</Color>
+    <Color x:Key="BorderDark">#1E3D34</Color>
 
-    <SolidColorBrush x:Key="Gray100Brush" Color="{StaticResource Gray100}"/>
-    <SolidColorBrush x:Key="Gray200Brush" Color="{StaticResource Gray200}"/>
-    <SolidColorBrush x:Key="Gray300Brush" Color="{StaticResource Gray300}"/>
-    <SolidColorBrush x:Key="Gray400Brush" Color="{StaticResource Gray400}"/>
-    <SolidColorBrush x:Key="Gray500Brush" Color="{StaticResource Gray500}"/>
-    <SolidColorBrush x:Key="Gray600Brush" Color="{StaticResource Gray600}"/>
-    <SolidColorBrush x:Key="Gray900Brush" Color="{StaticResource Gray900}"/>
-    <SolidColorBrush x:Key="Gray950Brush" Color="{StaticResource Gray950}"/>
+    <!-- ── Input Fields ─────────────────────────────────── -->
+    <Color x:Key="InputBackgroundLight">#FFFFFF</Color>
+    <Color x:Key="InputBackgroundDark">#0F1F1C</Color>
+    <Color x:Key="PlaceholderLight">#7EA898</Color>
+    <Color x:Key="PlaceholderDark">#4A7A68</Color>
+
+    <!-- ── Semantic ──────────────────────────────────────── -->
+    <Color x:Key="Error">#C0392B</Color>
+    <Color x:Key="ErrorDark">#EF5350</Color>
+    <Color x:Key="Success">#408A71</Color>
+    <Color x:Key="Warning">#F57C00</Color>
+
+    <!-- ── Neutral Grays (green-tinted, for disabled / utility) ── -->
+    <Color x:Key="Gray100">#E8F0EC</Color>
+    <Color x:Key="Gray200">#C8D8D0</Color>
+    <Color x:Key="Gray300">#A0B8AE</Color>
+    <Color x:Key="Gray400">#789890</Color>
+    <Color x:Key="Gray500">#507870</Color>
+    <Color x:Key="Gray600">#304840</Color>
+    <Color x:Key="Gray900">#162018</Color>
+    <Color x:Key="Gray950">#0A1410</Color>
+
+    <!-- ── Brushes ───────────────────────────────────────── -->
+    <SolidColorBrush x:Key="BrandDarkBrush"        Color="{StaticResource BrandDark}"/>
+    <SolidColorBrush x:Key="BrandMidBrush"         Color="{StaticResource BrandMid}"/>
+    <SolidColorBrush x:Key="BrandLightBrush"       Color="{StaticResource BrandLight}"/>
+    <SolidColorBrush x:Key="BackgroundLightBrush"  Color="{StaticResource BackgroundLight}"/>
+    <SolidColorBrush x:Key="BackgroundDarkBrush"   Color="{StaticResource BackgroundDark}"/>
+    <SolidColorBrush x:Key="SurfaceLightBrush"     Color="{StaticResource SurfaceLight}"/>
+    <SolidColorBrush x:Key="SurfaceDarkBrush"      Color="{StaticResource SurfaceDark}"/>
+
 </ResourceDictionary>

@@ -3,12 +3,65 @@
     x:Class="VenueOps.AppShell"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-    xmlns:local="clr-namespace:VenueOps"
+    xmlns:dashboard="clr-namespace:VenueOps.Views.Dashboard"
+    FlyoutBackgroundColor="{AppThemeBinding Light={StaticResource SurfaceLight}, Dark={StaticResource SurfaceDark}}"
     Title="VenueOps">
 
-    <ShellContent
-        Title="Home"
-        ContentTemplate="{DataTemplate local:MainPage}"
-        Route="MainPage" />
+    <!-- ── Flyout Header ───────────────────────────────────── -->
+    <Shell.FlyoutHeader>
+        <Grid
+            HeightRequest="130"
+            Padding="20,0,20,20"
+            BackgroundColor="{AppThemeBinding Light={StaticResource BrandDark}, Dark={StaticResource SurfaceDark}}">
+            <VerticalStackLayout VerticalOptions="End" Spacing="2">
+                <Label
+                    Text="VenueOps"
+                    FontFamily="OpenSansSemibold"
+                    FontSize="22"
+                    TextColor="{StaticResource BrandLight}"/>
+                <Label
+                    Text="Operations Dashboard"
+                    FontFamily="OpenSansRegular"
+                    FontSize="12"
+                    TextColor="{StaticResource BrandLight}"
+                    Opacity="0.7"/>
+            </VerticalStackLayout>
+        </Grid>
+    </Shell.FlyoutHeader>
+
+    <!-- ── Navigation Items ───────────────────────────────── -->
+
+    <!--
+        Dashboard is the only active page for this POC.
+        Future items: Venues, Rooms, Bookings, Staff, Devices —
+        uncomment and add the relevant xmlns + View class when ready.
+    -->
+    <FlyoutItem Title="Dashboard" Route="dashboard">
+        <ShellContent
+            Route="dashboard"
+            ContentTemplate="{DataTemplate dashboard:DashboardView}"/>
+    </FlyoutItem>
+
+    <!--
+    <FlyoutItem Title="Venues">
+        <ShellContent ContentTemplate="{DataTemplate venues:VenuesView}"/>
+    </FlyoutItem>
+
+    <FlyoutItem Title="Rooms">
+        <ShellContent ContentTemplate="{DataTemplate rooms:RoomsView}"/>
+    </FlyoutItem>
+
+    <FlyoutItem Title="Bookings">
+        <ShellContent ContentTemplate="{DataTemplate bookings:BookingsView}"/>
+    </FlyoutItem>
+
+    <FlyoutItem Title="Staff">
+        <ShellContent ContentTemplate="{DataTemplate staff:StaffView}"/>
+    </FlyoutItem>
+
+    <FlyoutItem Title="Devices">
+        <ShellContent ContentTemplate="{DataTemplate devices:DevicesView}"/>
+    </FlyoutItem>
+    -->
 
 </Shell>
