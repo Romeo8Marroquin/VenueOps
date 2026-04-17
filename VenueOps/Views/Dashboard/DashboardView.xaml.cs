@@ -24,9 +24,6 @@ public partial class DashboardView : ContentPage
     /// and 2 columns × 3 rows (small phone portrait) at a 480dp breakpoint.
     /// Called by MAUI on every layout pass; the early-exit guard keeps it cheap.
     /// </summary>
-    private void OnHamburgerTapped(object sender, TappedEventArgs e)
-        => Shell.Current.FlyoutIsPresented = !Shell.Current.FlyoutIsPresented;
-
     protected override void OnSizeAllocated(double width, double height)
     {
         base.OnSizeAllocated(width, height);

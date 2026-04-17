@@ -148,27 +148,6 @@
 
             <HorizontalStackLayout Spacing="10" VerticalOptions="Center">
 
-                <!--
-                    Hamburger toggle — replaces the Shell nav bar flyout icon.
-                    Uses TapGestureRecognizer (handled in code-behind) to toggle
-                    Shell.Current.FlyoutIsPresented.
-                    MinimumWidthRequest / HeightRequest give an adequate touch target.
-                -->
-                <Label
-                    Text="☰"
-                    FontSize="22"
-                    VerticalOptions="Center"
-                    MinimumWidthRequest="40"
-                    MinimumHeightRequest="40"
-                    Margin="0,0,4,0"
-                    TextColor="{AppThemeBinding
-                        Light={StaticResource BrandDark},
-                        Dark={StaticResource BrandLight}}">
-                    <Label.GestureRecognizers>
-                        <TapGestureRecognizer Tapped="OnHamburgerTapped"/>
-                    </Label.GestureRecognizers>
-                </Label>
-
                 <!-- Brand name -->
                 <Label
                     Text="VenueOps"
