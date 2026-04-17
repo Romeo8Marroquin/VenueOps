@@ -59,9 +59,9 @@
     <!-- ── Flyout Navigation ─────────────────────────────── -->
     <!-- Selected item glass pill — semi-transparent brand tint -->
     <Color x:Key="FlyoutItemSelectedBgLight">#26285A48</Color>     <!-- BrandDark 15% -->
-    <Color x:Key="FlyoutItemSelectedBgDark">#33B0E4CC</Color>      <!-- BrandLight 20% -->
+    <Color x:Key="FlyoutItemSelectedBgDark">#1AB0E4CC</Color>      <!-- BrandLight 10% — subtle so icon stays visible -->
     <Color x:Key="FlyoutItemSelectedStrokeLight">#40285A48</Color>  <!-- BrandDark 25% -->
-    <Color x:Key="FlyoutItemSelectedStrokeDark">#4DB0E4CC</Color>   <!-- BrandLight 30% -->
+    <Color x:Key="FlyoutItemSelectedStrokeDark">#29B0E4CC</Color>   <!-- BrandLight 16% -->
 
     <!-- ── Semantic ──────────────────────────────────────── -->
     <Color x:Key="Error">#C0392B</Color>

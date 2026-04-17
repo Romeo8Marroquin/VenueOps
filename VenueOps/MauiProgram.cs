@@ -39,6 +39,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<INavigationService, NavigationService>();
         builder.Services.AddSingleton<IDialogService, DialogService>();
         builder.Services.AddSingleton<ISessionService, SessionService>();
+        builder.Services.AddSingleton<IDashboardService, DashboardService>();
 
         // ── Shell (Singleton) ─────────────────────────────────────────────────
         builder.Services.AddSingleton<AppShell>();

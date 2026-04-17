@@ -14,24 +14,35 @@
     <!-- ── Flyout Header ──────────────────────────────────── -->
     <Shell.FlyoutHeader>
         <Grid
-            HeightRequest="80"
-            BackgroundColor="{AppThemeBinding
-                Light={StaticResource BrandDark},
-                Dark={StaticResource SurfaceDark}}">
+            HeightRequest="90"
+            BackgroundColor="Transparent">
             <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="2">
                 <Label
                     Text="VenueOps"
                     FontFamily="OpenSansSemibold"
                     FontSize="22"
                     HorizontalTextAlignment="Center"
-                    TextColor="{StaticResource BrandLight}"/>
+                    TextColor="{AppThemeBinding
+                        Light={StaticResource BrandDark},
+                        Dark={StaticResource BrandLight}}"/>
                 <Label
-                    Text="Operations Dashboard"
+                    Text="Every Event. Every Space."
                     FontFamily="OpenSansRegular"
-                    FontSize="12"
+                    FontSize="11"
                     HorizontalTextAlignment="Center"
-                    TextColor="{StaticResource BrandLight}"
-                    Opacity="0.7"/>
+                    TextColor="{AppThemeBinding
+                        Light={StaticResource TextSecondaryLight},
+                        Dark={StaticResource BrandLight}}"
+                    Opacity="0.75"/>
+                <Label
+                    Text="One Platform."
+                    FontFamily="OpenSansRegular"
+                    FontSize="11"
+                    HorizontalTextAlignment="Center"
+                    TextColor="{AppThemeBinding
+                        Light={StaticResource TextSecondaryLight},
+                        Dark={StaticResource BrandLight}}"
+                    Opacity="0.55"/>
             </VerticalStackLayout>
         </Grid>
     </Shell.FlyoutHeader>

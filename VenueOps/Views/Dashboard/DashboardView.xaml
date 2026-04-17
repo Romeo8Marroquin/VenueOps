@@ -3,44 +3,546 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:vm="clr-namespace:VenueOps.ViewModels"
+    xmlns:models="clr-namespace:VenueOps.Models.Events"
+    xmlns:conv="clr-namespace:VenueOps.Converters"
     x:Class="VenueOps.Views.Dashboard.DashboardView"
     x:DataType="vm:DashboardViewModel"
-    Title="Dashboard">
+    Title=""
+    Shell.NavBarIsVisible="False">
 
-    <Grid Padding="24">
-        <VerticalStackLayout Spacing="16" VerticalOptions="Center">
+    <!--
+        Shell.NavBarIsVisible="False" removes the Shell navigation bar entirely,
+        eliminating the dark strip that was consuming space between the Windows
+        title bar and the page content.
+        The flyout hamburger is replaced by an inline toggle in the brand header below.
+    -->
 
-            <!-- Welcome heading -->
-            <Label
-                Text="Welcome to VenueOps"
-                Style="{StaticResource Headline}"
-                HorizontalOptions="Center"
-                SemanticProperties.HeadingLevel="Level1"/>
+    <ContentPage.Resources>
 
-            <Label
-                Text="Your operations dashboard is ready."
-                Style="{StaticResource BodySecondary}"
-                HorizontalOptions="Center"
-                HorizontalTextAlignment="Center"/>
+        <!-- ── Converters ──────────────────────────────────────────────── -->
+        <conv:UtcToLocalConverter x:Key="UtcToLocal" Format="MMM d, h:mm tt"/>
+        <conv:EventStatusConverter x:Key="EventStatus"/>
 
-            <!-- Placeholder content card -->
-            <Border Style="{StaticResource Card}" Margin="0,16,0,0">
+        <!-- ── Insight card — subtle tinted surface ────────────────────── -->
+        <Style x:Key="InsightCard" TargetType="Border">
+            <Setter Property="StrokeShape" Value="RoundRectangle 12"/>
+            <Setter Property="StrokeThickness" Value="1"/>
+            <Setter Property="Stroke"
+                    Value="{AppThemeBinding Light={StaticResource BrandLight},
+                                            Dark={StaticResource BorderDark}}"/>
+            <Setter Property="BackgroundColor"
+                    Value="{AppThemeBinding Light={StaticResource Gray100},
+                                            Dark={StaticResource SurfaceVariantDark}}"/>
+            <Setter Property="Padding" Value="16"/>
+        </Style>
+
+        <!-- ── Stat card — compact metric tile ─────────────────────────── -->
+        <Style x:Key="StatCard" TargetType="Border">
+            <Setter Property="StrokeShape" Value="RoundRectangle 12"/>
+            <Setter Property="StrokeThickness" Value="1"/>
+            <Setter Property="Stroke"
+                    Value="{AppThemeBinding Light={StaticResource BorderLight},
+                                            Dark={StaticResource BorderDark}}"/>
+            <Setter Property="BackgroundColor"
+                    Value="{AppThemeBinding Light={StaticResource SurfaceLight},
+                                            Dark={StaticResource SurfaceDark}}"/>
+            <Setter Property="Padding" Value="14,12"/>
+        </Style>
+
+        <!-- ── Typographic helpers ─────────────────────────────────────── -->
+        <Style x:Key="StatNumber" TargetType="Label">
+            <Setter Property="FontFamily" Value="OpenSansSemibold"/>
+            <Setter Property="FontSize" Value="22"/>
+            <Setter Property="TextColor"
+                    Value="{AppThemeBinding Light={StaticResource BrandDark},
+                                            Dark={StaticResource BrandLight}}"/>
+        </Style>
+
+        <Style x:Key="StatLabel" TargetType="Label">
+            <Setter Property="FontFamily" Value="OpenSansRegular"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="TextColor"
+                    Value="{AppThemeBinding Light={StaticResource TextSecondaryLight},
+                                            Dark={StaticResource TextSecondaryDark}}"/>
+        </Style>
+
+        <Style x:Key="SectionTitle" TargetType="Label">
+            <Setter Property="FontFamily" Value="OpenSansSemibold"/>
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="TextColor"
+                    Value="{AppThemeBinding Light={StaticResource TextPrimaryLight},
+                                            Dark={StaticResource TextPrimaryDark}}"/>
+        </Style>
+
+        <Style x:Key="EventTitle" TargetType="Label">
+            <Setter Property="FontFamily" Value="OpenSansSemibold"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="TextColor"
+                    Value="{AppThemeBinding Light={StaticResource TextPrimaryLight},
+                                            Dark={StaticResource TextPrimaryDark}}"/>
+        </Style>
+
+        <Style x:Key="EventMeta" TargetType="Label">
+            <Setter Property="FontFamily" Value="OpenSansRegular"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="TextColor"
+                    Value="{AppThemeBinding Light={StaticResource TextSecondaryLight},
+                                            Dark={StaticResource TextSecondaryDark}}"/>
+        </Style>
+
+        <!-- ── Compact ghost button — pagination nav ────────────────────── -->
+        <Style x:Key="PageNavButton" TargetType="Button">
+            <Setter Property="TextColor"
+                    Value="{AppThemeBinding Light={StaticResource BrandMid},
+                                            Dark={StaticResource BrandLight}}"/>
+            <Setter Property="BackgroundColor" Value="Transparent"/>
+            <Setter Property="BorderColor"
+                    Value="{AppThemeBinding Light={StaticResource BorderLight},
+                                            Dark={StaticResource BorderDark}}"/>
+            <Setter Property="BorderWidth" Value="1"/>
+            <Setter Property="FontFamily" Value="OpenSansSemibold"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="14,8"/>
+            <Setter Property="MinimumHeightRequest" Value="36"/>
+            <Setter Property="MinimumWidthRequest" Value="44"/>
+        </Style>
+
+        <!-- ── Compact primary button — action in banner ────────────────── -->
+        <Style x:Key="BannerActionButton" TargetType="Button">
+            <Setter Property="TextColor"
+                    Value="{AppThemeBinding Light={StaticResource SurfaceLight},
+                                            Dark={StaticResource TextPrimaryDark}}"/>
+            <Setter Property="BackgroundColor"
+                    Value="{AppThemeBinding Light={StaticResource BrandDark},
+                                            Dark={StaticResource BrandMid}}"/>
+            <Setter Property="FontFamily" Value="OpenSansSemibold"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="14,8"/>
+            <Setter Property="MinimumHeightRequest" Value="36"/>
+            <Setter Property="MinimumWidthRequest" Value="44"/>
+        </Style>
+
+    </ContentPage.Resources>
+
+    <!--
+        Two-row root Grid:
+          Row 0 — fixed brand/nav header (always visible, does not scroll)
+          Row 1 — scrollable dashboard content
+        This replaces the Shell nav bar as the page's primary chrome.
+    -->
+    <Grid RowDefinitions="Auto,*">
+
+        <!-- ════════════════════════════════════════════════════════
+             FIXED BRAND HEADER (non-scrolling)
+             Left-aligned: hamburger toggle | VenueOps | divider | subtitle
+             Sits at the top of the page without consuming Shell chrome space.
+             ════════════════════════════════════════════════════════ -->
+        <Grid
+            Grid.Row="0"
+            Padding="16,10,16,8"
+            BackgroundColor="{AppThemeBinding
+                Light={StaticResource BackgroundLight},
+                Dark={StaticResource BackgroundDark}}">
+
+            <HorizontalStackLayout Spacing="10" VerticalOptions="Center">
+
+                <!--
+                    Hamburger toggle — replaces the Shell nav bar flyout icon.
+                    Uses TapGestureRecognizer (handled in code-behind) to toggle
+                    Shell.Current.FlyoutIsPresented.
+                    MinimumWidthRequest / HeightRequest give an adequate touch target.
+                -->
                 <Label
-                    Text="Dashboard content coming soon..."
-                    Style="{StaticResource BodySecondary}"
-                    HorizontalOptions="Center"
-                    HorizontalTextAlignment="Center"/>
-            </Border>
+                    Text="☰"
+                    FontSize="22"
+                    VerticalOptions="Center"
+                    MinimumWidthRequest="40"
+                    MinimumHeightRequest="40"
+                    Margin="0,0,4,0"
+                    TextColor="{AppThemeBinding
+                        Light={StaticResource BrandDark},
+                        Dark={StaticResource BrandLight}}">
+                    <Label.GestureRecognizers>
+                        <TapGestureRecognizer Tapped="OnHamburgerTapped"/>
+                    </Label.GestureRecognizers>
+                </Label>
 
-            <!-- Sign Out -->
-            <Button
-                Text="Sign Out"
-                Command="{Binding LogoutCommand}"
-                Style="{StaticResource OutlineButton}"
-                Margin="0,32,0,0"
-                AutomationId="LogoutButton"/>
+                <!-- Brand name -->
+                <Label
+                    Text="VenueOps"
+                    FontFamily="OpenSansSemibold"
+                    FontSize="20"
+                    VerticalOptions="Center"
+                    TextColor="{AppThemeBinding
+                        Light={StaticResource BrandDark},
+                        Dark={StaticResource BrandLight}}"/>
 
-        </VerticalStackLayout>
+                <!-- Thin vertical divider -->
+                <BoxView
+                    WidthRequest="1.5"
+                    HeightRequest="18"
+                    CornerRadius="1"
+                    VerticalOptions="Center"
+                    BackgroundColor="{AppThemeBinding
+                        Light={StaticResource Gray300},
+                        Dark={StaticResource Gray600}}"/>
+
+                <!-- Subtitle -->
+                <Label
+                    Text="Operations Dashboard"
+                    FontFamily="OpenSansRegular"
+                    FontSize="14"
+                    VerticalOptions="Center"
+                    Opacity="0.65"
+                    TextColor="{AppThemeBinding
+                        Light={StaticResource TextSecondaryLight},
+                        Dark={StaticResource TextSecondaryDark}}"/>
+
+            </HorizontalStackLayout>
+        </Grid>
+
+        <!-- ════════════════════════════════════════════════════════
+             SCROLLABLE DASHBOARD CONTENT
+             ════════════════════════════════════════════════════════ -->
+        <ScrollView Grid.Row="1">
+            <VerticalStackLayout Spacing="14" Padding="16,8,16,32">
+
+                <!-- ════════════════════════════════════════════════════════
+                     WELCOME BANNER
+                     Left  — hello greeting + subtitle
+                     Right — create event button + quick search entry
+                     ════════════════════════════════════════════════════════ -->
+                <Border Style="{StaticResource Card}">
+                    <Border.Shadow>
+                        <Shadow Radius="20" Opacity="0.09" Offset="0,4">
+                            <Shadow.Brush>
+                                <SolidColorBrush
+                                    Color="{AppThemeBinding Light={StaticResource BrandDark},
+                                                            Dark={StaticResource BackgroundDark}}"/>
+                            </Shadow.Brush>
+                        </Shadow>
+                    </Border.Shadow>
+
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+
+                        <!-- Greeting + subtitle -->
+                        <VerticalStackLayout Grid.Column="0" Spacing="4" VerticalOptions="Center">
+                            <Label Style="{StaticResource SubHeadline}">
+                                <Label.FormattedText>
+                                    <FormattedString>
+                                        <Span Text="Hello, "/>
+                                        <Span
+                                            Text="{Binding WelcomeName}"
+                                            FontFamily="OpenSansSemibold"
+                                            TextColor="{AppThemeBinding
+                                                Light={StaticResource BrandDark},
+                                                Dark={StaticResource BrandLight}}"/>
+                                    </FormattedString>
+                                </Label.FormattedText>
+                            </Label>
+                            <Label
+                                Text="Here's what's happening across your venues today."
+                                Style="{StaticResource BodySecondary}"
+                                LineBreakMode="WordWrap"/>
+                        </VerticalStackLayout>
+
+                        <!-- Actions — stacked vertically on the right -->
+                        <VerticalStackLayout
+                            Grid.Column="1"
+                            Spacing="8"
+                            VerticalOptions="Center"
+                            MinimumWidthRequest="140">
+
+                            <Button
+                                Text="+ New Event"
+                                Command="{Binding CreateEventCommand}"
+                                Style="{StaticResource BannerActionButton}"
+                                AutomationId="CreateEventButton"/>
+
+                            <Border Style="{StaticResource InputBorder}">
+                                <Entry
+                                    Placeholder="Search events..."
+                                    Text="{Binding SearchQuery}"
+                                    ReturnType="Search"
+                                    ReturnCommand="{Binding SearchCommand}"
+                                    FontSize="13"
+                                    Margin="10,0"/>
+                            </Border>
+
+                        </VerticalStackLayout>
+                    </Grid>
+                </Border>
+
+                <!-- ════════════════════════════════════════════════════════
+                     TODAY'S INSIGHT
+                     ════════════════════════════════════════════════════════ -->
+                <Border Style="{StaticResource InsightCard}" IsVisible="{Binding HasInsight}">
+                    <Grid ColumnDefinitions="3,*" ColumnSpacing="12">
+
+                        <BoxView
+                            Grid.Column="0"
+                            CornerRadius="2"
+                            VerticalOptions="Fill"
+                            BackgroundColor="{AppThemeBinding
+                                Light={StaticResource BrandMid},
+                                Dark={StaticResource BrandLight}}"/>
+
+                        <VerticalStackLayout Grid.Column="1" Spacing="6">
+                            <Label
+                                Text="Today's Insight"
+                                FontFamily="OpenSansSemibold"
+                                FontSize="11"
+                                CharacterSpacing="0.8"
+                                TextColor="{AppThemeBinding
+                                    Light={StaticResource BrandMid},
+                                    Dark={StaticResource BrandLight}}"/>
+                            <Label
+                                Text="{Binding InsightMessage}"
+                                Style="{StaticResource BodySecondary}"
+                                LineBreakMode="WordWrap"/>
+                            <Label
+                                Style="{StaticResource Caption}"
+                                TextColor="{AppThemeBinding
+                                    Light={StaticResource Gray400},
+                                    Dark={StaticResource Gray500}}">
+                                <Label.FormattedText>
+                                    <FormattedString>
+                                        <Span Text="Updated "/>
+                                        <Span Text="{Binding InsightUpdatedUtc,
+                                                              Converter={StaticResource UtcToLocal}}"/>
+                                    </FormattedString>
+                                </Label.FormattedText>
+                            </Label>
+                        </VerticalStackLayout>
+
+                    </Grid>
+                </Border>
+
+                <!-- ════════════════════════════════════════════════════════
+                     STATS GRID  (3 cols × 2 rows — default for tablet+)
+                     Responsive: code-behind switches to 2 × 3 for small phones.
+                     ════════════════════════════════════════════════════════ -->
+                <Grid
+                    x:Name="StatsGrid"
+                    ColumnDefinitions="*,*,*"
+                    RowDefinitions="Auto,Auto"
+                    RowSpacing="10"
+                    ColumnSpacing="10">
+
+                    <Border Grid.Row="0" Grid.Column="0" Style="{StaticResource StatCard}">
+                        <VerticalStackLayout Spacing="2">
+                            <Label Text="{Binding TotalEvents, StringFormat='{0:N0}'}" Style="{StaticResource StatNumber}"/>
+                            <Label Text="Total Events" Style="{StaticResource StatLabel}"/>
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <Border Grid.Row="0" Grid.Column="1" Style="{StaticResource StatCard}">
+                        <VerticalStackLayout Spacing="2">
+                            <Label Text="{Binding TotalBookings, StringFormat='{0:N0}'}" Style="{StaticResource StatNumber}"/>
+                            <Label Text="Bookings" Style="{StaticResource StatLabel}"/>
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <Border Grid.Row="0" Grid.Column="2" Style="{StaticResource StatCard}">
+                        <VerticalStackLayout Spacing="2">
+                            <Label Text="{Binding TotalAttendees, StringFormat='{0:N0}'}" Style="{StaticResource StatNumber}"/>
+                            <Label Text="Attendees" Style="{StaticResource StatLabel}"/>
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <Border Grid.Row="1" Grid.Column="0" Style="{StaticResource StatCard}">
+                        <VerticalStackLayout Spacing="2">
+                            <Label Text="{Binding ActiveVenues, StringFormat='{0:N0}'}" Style="{StaticResource StatNumber}"/>
+                            <Label Text="Active Venues" Style="{StaticResource StatLabel}"/>
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <Border Grid.Row="1" Grid.Column="1" Style="{StaticResource StatCard}">
+                        <VerticalStackLayout Spacing="2">
+                            <Label Text="{Binding OccupancyRate}" Style="{StaticResource StatNumber}"/>
+                            <Label Text="Occupancy Rate" Style="{StaticResource StatLabel}"/>
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <Border Grid.Row="1" Grid.Column="2" Style="{StaticResource StatCard}">
+                        <VerticalStackLayout Spacing="2">
+                            <Label Text="{Binding SponsorsCount, StringFormat='{0:N0}'}" Style="{StaticResource StatNumber}"/>
+                            <Label Text="Sponsors" Style="{StaticResource StatLabel}"/>
+                        </VerticalStackLayout>
+                    </Border>
+
+                </Grid>
+
+                <!-- ════════════════════════════════════════════════════════
+                     RECENT EVENTS
+                     ════════════════════════════════════════════════════════ -->
+                <Border Style="{StaticResource Card}">
+                    <VerticalStackLayout Spacing="0">
+
+                        <!-- Section header -->
+                        <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8" Margin="0,0,0,4">
+                            <Label
+                                Grid.Column="0"
+                                Text="Recent Events"
+                                Style="{StaticResource SectionTitle}"/>
+                            <Label
+                                Grid.Column="1"
+                                Style="{StaticResource Caption}"
+                                VerticalOptions="Center">
+                                <Label.FormattedText>
+                                    <FormattedString>
+                                        <Span Text="{Binding RecentEvents.TotalItems, StringFormat='{0:N0}'}"/>
+                                        <Span Text=" total"/>
+                                    </FormattedString>
+                                </Label.FormattedText>
+                            </Label>
+
+                            <!--
+                                Refresh icon button.
+                                Root cause of the "too large" issue: the implicit ImageButton
+                                style sets MinimumHeightRequest="44" and ImageButton scales
+                                its image to fill its bounds — so the image became 44dp even
+                                with HeightRequest="16".
+                                Fix: explicitly override both minimums to 0 so the button
+                                lays out at exactly HeightRequest × WidthRequest.
+                            -->
+                            <ImageButton
+                                Grid.Column="2"
+                                Source="{AppThemeBinding Light=refresh.png, Dark=refresh_dark.png}"
+                                Command="{Binding RefreshAllCommand}"
+                                HeightRequest="16"
+                                WidthRequest="16"
+                                MinimumHeightRequest="0"
+                                MinimumWidthRequest="0"
+                                BackgroundColor="Transparent"
+                                BorderColor="Transparent"
+                                BorderWidth="0"
+                                Padding="0"
+                                Margin="10,0,0,0"
+                                VerticalOptions="Center"
+                                AutomationId="RefreshButton"/>
+                        </Grid>
+
+                        <!-- Loading placeholder -->
+                        <Grid
+                            IsVisible="{Binding RecentEvents.IsLoading}"
+                            HeightRequest="260">
+                            <ActivityIndicator
+                                IsRunning="True"
+                                HorizontalOptions="Center"
+                                VerticalOptions="Center"/>
+                        </Grid>
+
+                        <!-- Event rows (hidden while loading) -->
+                        <VerticalStackLayout
+                            IsVisible="{Binding RecentEvents.IsNotLoading}"
+                            Spacing="0"
+                            BindableLayout.ItemsSource="{Binding RecentEvents.Items}">
+
+                            <BindableLayout.ItemTemplate>
+                                <DataTemplate x:DataType="models:RecentEvent">
+                                    <VerticalStackLayout Spacing="0">
+
+                                        <BoxView
+                                            HeightRequest="1"
+                                            Margin="0,6,0,0"
+                                            BackgroundColor="{AppThemeBinding
+                                                Light={StaticResource BorderLight},
+                                                Dark={StaticResource BorderDark}}"/>
+
+                                        <Grid
+                                            ColumnDefinitions="*,Auto"
+                                            RowDefinitions="Auto,Auto,Auto"
+                                            RowSpacing="3"
+                                            ColumnSpacing="8"
+                                            Padding="0,10,0,4">
+
+                                            <Label
+                                                Grid.Row="0" Grid.Column="0"
+                                                Text="{Binding EventName}"
+                                                Style="{StaticResource EventTitle}"
+                                                LineBreakMode="TailTruncation"/>
+
+                                            <Border
+                                                Grid.Row="0" Grid.Column="1"
+                                                StrokeShape="RoundRectangle 4"
+                                                StrokeThickness="0"
+                                                Padding="6,3"
+                                                VerticalOptions="Center"
+                                                BackgroundColor="{Binding Status,
+                                                    Converter={StaticResource EventStatus},
+                                                    ConverterParameter=background}">
+                                                <Label
+                                                    Text="{Binding Status,
+                                                        Converter={StaticResource EventStatus},
+                                                        ConverterParameter=label}"
+                                                    FontFamily="OpenSansSemibold"
+                                                    FontSize="11"
+                                                    TextColor="{Binding Status,
+                                                        Converter={StaticResource EventStatus},
+                                                        ConverterParameter=text}"/>
+                                            </Border>
+
+                                            <Label
+                                                Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
+                                                Style="{StaticResource EventMeta}"
+                                                LineBreakMode="TailTruncation">
+                                                <Label.FormattedText>
+                                                    <FormattedString>
+                                                        <Span Text="{Binding VenueName}"/>
+                                                        <Span Text="  ·  "/>
+                                                        <Span Text="{Binding StartDateUtc,
+                                                            Converter={StaticResource UtcToLocal}}"/>
+                                                    </FormattedString>
+                                                </Label.FormattedText>
+                                            </Label>
+
+                                            <Label
+                                                Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2"
+                                                Style="{StaticResource EventMeta}">
+                                                <Label.FormattedText>
+                                                    <FormattedString>
+                                                        <Span Text="{Binding AttendeeCount, StringFormat='{0:N0}'}"/>
+                                                        <Span Text=" attendees  ·  "/>
+                                                        <Span Text="{Binding BookingReference}"/>
+                                                    </FormattedString>
+                                                </Label.FormattedText>
+                                            </Label>
+
+                                        </Grid>
+                                    </VerticalStackLayout>
+                                </DataTemplate>
+                            </BindableLayout.ItemTemplate>
+                        </VerticalStackLayout>
+
+                        <!-- Pagination -->
+                        <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,14,0,0">
+                            <Button
+                                Grid.Column="0"
+                                Text="Prev"
+                                Command="{Binding RecentEvents.PreviousPageCommand}"
+                                Style="{StaticResource PageNavButton}"/>
+                            <Label
+                                Grid.Column="1"
+                                Text="{Binding RecentEvents.PageLabel}"
+                                Style="{StaticResource Caption}"
+                                HorizontalOptions="Center"
+                                VerticalOptions="Center"/>
+                            <Button
+                                Grid.Column="2"
+                                Text="Next"
+                                Command="{Binding RecentEvents.NextPageCommand}"
+                                Style="{StaticResource PageNavButton}"/>
+                        </Grid>
+
+                    </VerticalStackLayout>
+                </Border>
+
+            </VerticalStackLayout>
+        </ScrollView>
+
     </Grid>
 
 </ContentPage>
