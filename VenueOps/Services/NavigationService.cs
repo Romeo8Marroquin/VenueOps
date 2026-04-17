@@ -15,8 +15,10 @@ public sealed class NavigationService(IServiceProvider serviceProvider) : INavig
 
     public Task NavigateToMainAsync()
     {
-        // AppShell is Singleton — reuses the same instance for the session.
+        // AppShell is Singleton — reuses the same instance across sign-ins.
         Application.Current!.Windows[0].Page = _serviceProvider.GetRequiredService<AppShell>();
+        // Refresh the flyout footer so it shows the newly signed-in user's info.
+        _serviceProvider.GetRequiredService<ViewModels.AppShellViewModel>().RefreshUserInfo();
         return Task.CompletedTask;
     }
 

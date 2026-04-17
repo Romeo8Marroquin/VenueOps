@@ -1,16 +1,17 @@
-using VenueOps.Views.Dashboard;
+using VenueOps.ViewModels;
 
 namespace VenueOps;
 
 public partial class AppShell : Shell
 {
-    public AppShell()
+    public AppShell(AppShellViewModel viewModel)
     {
         InitializeComponent();
+        BindingContext = viewModel;
 
         // Register routes for programmatic Shell.GoToAsync navigation.
         // LoginView lives outside the Shell hierarchy — it is shown by
-        // switching Application.MainPage via INavigationService, not GoToAsync.
+        // switching Window[0].Page via INavigationService, not GoToAsync.
         Routing.RegisterRoute("dashboard", typeof(Views.Dashboard.DashboardView));
     }
 }

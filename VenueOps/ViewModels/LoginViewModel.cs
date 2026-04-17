@@ -9,11 +9,13 @@ public partial class LoginViewModel : BaseViewModel
 {
     private readonly IAuthService _authService;
     private readonly INavigationService _navigationService;
+    private readonly ISessionService _sessionService;
 
-    public LoginViewModel(IAuthService authService, INavigationService navigationService)
+    public LoginViewModel(IAuthService authService, INavigationService navigationService, ISessionService sessionService)
     {
-        _authService = authService;
+        _authService       = authService;
         _navigationService = navigationService;
+        _sessionService    = sessionService;
         Title = "Sign In";
     }
 
@@ -56,7 +58,8 @@ public partial class LoginViewModel : BaseViewModel
 
             if (response is not null)
             {
-                Password = string.Empty; // clear sensitive field before navigation
+                _sessionService.CurrentUser = response.User; // store for flyout footer
+                Password = string.Empty;                     // clear sensitive field
                 await _navigationService.NavigateToMainAsync();
             }
             else
