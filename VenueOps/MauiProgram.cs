@@ -4,6 +4,7 @@ using VenueOps.Services;
 using VenueOps.ViewModels;
 using VenueOps.Views.Auth;
 using VenueOps.Views.Dashboard;
+using VenueOps.Views.Events;
 
 namespace VenueOps;
 
@@ -40,6 +41,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<IDialogService, DialogService>();
         builder.Services.AddSingleton<ISessionService, SessionService>();
         builder.Services.AddSingleton<IDashboardService, DashboardService>();
+        builder.Services.AddSingleton<IEventsService, EventsService>();
 
         // ── Shell (Singleton) ─────────────────────────────────────────────────
         builder.Services.AddSingleton<AppShell>();
@@ -49,11 +51,13 @@ public static class MauiProgram
         builder.Services.AddTransient<LoginViewModel>();
         builder.Services.AddTransient<RegisterViewModel>();
         builder.Services.AddTransient<DashboardViewModel>();
+        builder.Services.AddTransient<EventsViewModel>();
 
         // ── Views (Transient) ─────────────────────────────────────────────────
         builder.Services.AddTransient<LoginView>();
         builder.Services.AddTransient<RegisterView>();
         builder.Services.AddTransient<DashboardView>();
+        builder.Services.AddTransient<EventsView>();
 
         // ── Entry handler — remove platform-native borders / underlines ───────
         // Our Border wrapper is the sole visual frame for input fields.

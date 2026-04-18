@@ -4,6 +4,7 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:dashboard="clr-namespace:VenueOps.Views.Dashboard"
+    xmlns:events="clr-namespace:VenueOps.Views.Events"
     xmlns:viewmodels="clr-namespace:VenueOps.ViewModels"
     FlyoutBackgroundColor="{AppThemeBinding Light={StaticResource SurfaceLight}, Dark={StaticResource SurfaceDark}}"
     FlyoutHeaderBehavior="Fixed"
@@ -131,6 +132,15 @@
         <ShellContent
             Route="dashboard"
             ContentTemplate="{DataTemplate dashboard:DashboardView}"/>
+    </FlyoutItem>
+
+    <FlyoutItem
+        Title="Events"
+        Route="events"
+        Icon="{AppThemeBinding Light=calendar.png, Dark=calendar_dark.png}">
+        <ShellContent
+            Route="events"
+            ContentTemplate="{DataTemplate events:EventsView}"/>
     </FlyoutItem>
 
     <!--

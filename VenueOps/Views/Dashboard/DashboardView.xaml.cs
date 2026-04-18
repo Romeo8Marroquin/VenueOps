@@ -30,6 +30,8 @@ public partial class DashboardView : ContentPage
 
         if (width <= 0 || double.IsInfinity(width) || double.IsNaN(width)) return;
 
+        _viewModel.IsWideLayout = width >= 600;
+
         int targetCols = width < 480 ? 2 : 3;
 
         // Nothing to do if the column count already matches the target

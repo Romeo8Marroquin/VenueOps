@@ -13,5 +13,6 @@ public partial class AppShell : Shell
         // LoginView lives outside the Shell hierarchy — it is shown by
         // switching Window[0].Page via INavigationService, not GoToAsync.
         Routing.RegisterRoute("dashboard", typeof(Views.Dashboard.DashboardView));
+        Routing.RegisterRoute("events", typeof(Views.Events.EventsView));
     }
 }

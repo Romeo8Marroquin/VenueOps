@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Maui.Controls;
 using VenueOps.Models.Events;
 using VenueOps.Services;
 using VenueOps.ViewModels.Common;
@@ -17,6 +18,23 @@ public partial class DashboardViewModel : BaseViewModel
 
     [ObservableProperty]
     public partial string SearchQuery { get; set; } = string.Empty;
+
+    // ── Layout ────────────────────────────────────────────────────────────
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsCompactLayout))]
+    public partial bool IsWideLayout { get; set; }
+
+    public bool IsCompactLayout => !IsWideLayout;
+
+    // ── Events table search + filter ──────────────────────────────────────
+    [ObservableProperty]
+    public partial string EventsQuery { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string EventsStatusFilter { get; set; } = "All";
+
+    public IReadOnlyList<string> StatusFilters { get; } =
+        ["All", "Confirmed", "Draft", "Completed", "Cancelled"];
 
     // ── Insight ───────────────────────────────────────────────────────────
     [ObservableProperty]
@@ -57,7 +75,11 @@ public partial class DashboardViewModel : BaseViewModel
         Title = "Dashboard";
 
         RecentEvents = new PaginatedSection<RecentEvent>(
-            (page, size, ct) => _dashboardService.GetRecentEventsAsync(page, size, ct));
+            (page, size, ct) => _dashboardService.GetRecentEventsAsync(
+                page, size,
+                string.IsNullOrWhiteSpace(EventsQuery) ? null : EventsQuery,
+                EventsStatusFilter == "All" ? null : EventsStatusFilter.ToLowerInvariant(),
+                ct));
     }
 
     /// <summary>
@@ -94,10 +116,17 @@ public partial class DashboardViewModel : BaseViewModel
     }
 
     [RelayCommand]
-    private void Search()
+    private async Task SearchAsync()
     {
-        // TODO: Navigate to search page — pass SearchQuery as the query param
+        var encoded = Uri.EscapeDataString(SearchQuery ?? string.Empty);
+        await Shell.Current.GoToAsync($"//events?query={encoded}");
     }
+
+    [RelayCommand]
+    private Task SearchEventsAsync() => RecentEvents.LoadAsync();
+
+    partial void OnEventsStatusFilterChanged(string value)
+        => _ = RecentEvents.LoadAsync();
 
     protected override void OnBusyStateChanged(bool isBusy)
         => RefreshAllCommand.NotifyCanExecuteChanged();
