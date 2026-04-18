@@ -55,7 +55,7 @@
          gap between items that aligns with header/footer spacing.     -->
     <Shell.ItemTemplate>
         <DataTemplate x:DataType="BaseShellItem">
-            <Grid Padding="0,3" HorizontalOptions="Fill">
+            <Grid WidthRequest="186" Padding="0,3" HorizontalOptions="Fill">
                 <Border
                     HorizontalOptions="Fill"
                     Margin="12,0"
