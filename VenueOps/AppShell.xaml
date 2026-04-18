@@ -55,56 +55,60 @@
          gap between items that aligns with header/footer spacing.     -->
     <Shell.ItemTemplate>
         <DataTemplate x:DataType="BaseShellItem">
-            <Grid Padding="0,6">
+            <Grid Padding="0,3" HorizontalOptions="Fill">
                 <Border
-                x:Name="FlyoutPill"
-                HorizontalOptions="Fill"
-                Margin="16,0"
-                MinimumHeightRequest="56"
-                Padding="18,12"
-                BackgroundColor="Transparent"
-                Stroke="Transparent"
-                StrokeThickness="1"
-                StrokeShape="RoundRectangle 14">
+                    HorizontalOptions="Fill"
+                    Margin="12,0"
+                    MinimumHeightRequest="50"
+                    Padding="14,10"
+                    BackgroundColor="Transparent"
+                    Stroke="Transparent"
+                    StrokeThickness="1"
+                    StrokeShape="RoundRectangle 12">
 
-                    <HorizontalStackLayout
-                    Spacing="14"
-                    HorizontalOptions="Center"
-                    VerticalOptions="Center">
+                    <Grid
+                        ColumnDefinitions="26,*"
+                        ColumnSpacing="12"
+                        HorizontalOptions="Fill"
+                        VerticalOptions="Center">
 
                         <Image
-                        Source="{Binding FlyoutIcon}"
-                        WidthRequest="22"
-                        HeightRequest="22"
-                        Aspect="AspectFit"
-                        VerticalOptions="Center" />
+                            Grid.Column="0"
+                            Source="{Binding FlyoutIcon}"
+                            WidthRequest="22"
+                            HeightRequest="22"
+                            Aspect="AspectFit"
+                            HorizontalOptions="Center"
+                            VerticalOptions="Center" />
 
                         <Label
-                        Text="{Binding Title}"
-                        FontFamily="OpenSansRegular"
-                        FontSize="14"
-                        LineBreakMode="NoWrap"
-                        VerticalTextAlignment="Center"
-                        TextColor="{AppThemeBinding
-                            Light={StaticResource TextPrimaryLight},
-                            Dark={StaticResource TextPrimaryDark}}" />
-                    </HorizontalStackLayout>
+                            Grid.Column="1"
+                            Text="{Binding Title}"
+                            FontFamily="OpenSansRegular"
+                            FontSize="14"
+                            LineBreakMode="TailTruncation"
+                            HorizontalOptions="Fill"
+                            VerticalTextAlignment="Center"
+                            TextColor="{AppThemeBinding
+                                Light={StaticResource TextPrimaryLight},
+                                Dark={StaticResource TextPrimaryDark}}" />
+                    </Grid>
 
                     <Border.Triggers>
                         <DataTrigger
-                        TargetType="Border"
-                        Binding="{Binding IsChecked}"
-                        Value="True">
+                            TargetType="Border"
+                            Binding="{Binding IsChecked}"
+                            Value="True">
                             <Setter
-                            Property="BackgroundColor"
-                            Value="{AppThemeBinding
-                                Light={StaticResource FlyoutItemSelectedBgLight},
-                                Dark={StaticResource FlyoutItemSelectedBgDark}}" />
+                                Property="BackgroundColor"
+                                Value="{AppThemeBinding
+                                    Light={StaticResource FlyoutItemSelectedBgLight},
+                                    Dark={StaticResource FlyoutItemSelectedBgDark}}" />
                             <Setter
-                            Property="Stroke"
-                            Value="{AppThemeBinding
-                                Light={StaticResource FlyoutItemSelectedStrokeLight},
-                                Dark={StaticResource FlyoutItemSelectedStrokeDark}}" />
+                                Property="Stroke"
+                                Value="{AppThemeBinding
+                                    Light={StaticResource FlyoutItemSelectedStrokeLight},
+                                    Dark={StaticResource FlyoutItemSelectedStrokeDark}}" />
                         </DataTrigger>
                     </Border.Triggers>
                 </Border>
