@@ -53,7 +53,9 @@ public sealed class NavigationService(IServiceProvider serviceProvider) : INavig
         PopupOptions options = new()
         {
             CanBeDismissedByTappingOutsideOfPopup = true,
-            PageOverlayColor = Colors.Black.WithAlpha(0.45f)
+            PageOverlayColor = Colors.Black.WithAlpha(0.45f),
+            Shape = null,
+            Shadow = null
         };
         IPopupResult<bool> result = await host.ShowPopupAsync<bool>(popup, options);
 
