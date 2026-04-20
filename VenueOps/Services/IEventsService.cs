@@ -10,4 +10,8 @@ public interface IEventsService
         string? query = null, string? status = null,
         string sortBy = "startDateUtc", string sortDirection = "desc",
         CancellationToken ct = default);
+
+    Task<CreateEventResponse?> CreateEventAsync(
+        CreateEventRequest request,
+        CancellationToken ct = default);
 }

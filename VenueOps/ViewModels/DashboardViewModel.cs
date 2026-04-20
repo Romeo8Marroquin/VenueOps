@@ -9,8 +9,9 @@ namespace VenueOps.ViewModels;
 
 public partial class DashboardViewModel : BaseViewModel
 {
-    private readonly IDashboardService _dashboardService;
-    private readonly ISessionService   _sessionService;
+    private readonly IDashboardService  _dashboardService;
+    private readonly ISessionService    _sessionService;
+    private readonly INavigationService _navigationService;
 
     // ── Welcome ───────────────────────────────────────────────────────────
     [ObservableProperty]
@@ -68,10 +69,14 @@ public partial class DashboardViewModel : BaseViewModel
     // ── Recent Events (paginated) ─────────────────────────────────────────
     public PaginatedSection<RecentEvent> RecentEvents { get; }
 
-    public DashboardViewModel(IDashboardService dashboardService, ISessionService sessionService)
+    public DashboardViewModel(
+        IDashboardService dashboardService,
+        ISessionService sessionService,
+        INavigationService navigationService)
     {
-        _dashboardService = dashboardService;
-        _sessionService   = sessionService;
+        _dashboardService  = dashboardService;
+        _sessionService    = sessionService;
+        _navigationService = navigationService;
         Title = "Dashboard";
 
         RecentEvents = new PaginatedSection<RecentEvent>(
@@ -110,10 +115,8 @@ public partial class DashboardViewModel : BaseViewModel
     private bool CanRefreshAll() => IsNotBusy;
 
     [RelayCommand]
-    private void CreateEvent()
-    {
-        // TODO: Navigate to create-event page / show creation modal
-    }
+    private Task CreateEventAsync()
+        => _navigationService.PushCreateEventModalAsync(InitializeAsync);
 
     [RelayCommand]
     private async Task SearchAsync()

@@ -9,7 +9,8 @@ namespace VenueOps.ViewModels;
 
 public partial class EventsViewModel : BaseViewModel, IQueryAttributable
 {
-    private readonly IEventsService _eventsService;
+    private readonly IEventsService     _eventsService;
+    private readonly INavigationService _navigationService;
 
     // Maps the label shown in the UI to the backend field name expected by the API
     private static readonly Dictionary<string, string> SortFieldMap = new()
@@ -55,9 +56,10 @@ public partial class EventsViewModel : BaseViewModel, IQueryAttributable
     // ── Paginated events ──────────────────────────────────────────────────
     public PaginatedSection<RecentEvent> Events { get; }
 
-    public EventsViewModel(IEventsService eventsService)
+    public EventsViewModel(IEventsService eventsService, INavigationService navigationService)
     {
-        _eventsService = eventsService;
+        _eventsService     = eventsService;
+        _navigationService = navigationService;
         Title = "Event List";
 
         Events = new PaginatedSection<RecentEvent>(
@@ -100,10 +102,9 @@ public partial class EventsViewModel : BaseViewModel, IQueryAttributable
     }
 
     [RelayCommand]
-    private void CreateEvent()
-    {
-        // TODO: Navigate to create-event page / show creation modal
-    }
+    private Task CreateEventAsync()
+        => _navigationService.PushCreateEventModalAsync(
+            () => Events.LoadAsync());
 
     partial void OnEventsStatusFilterChanged(string value) => _ = Events.LoadAsync();
     partial void OnSortByFilterChanged(string value)       => _ = Events.LoadAsync();

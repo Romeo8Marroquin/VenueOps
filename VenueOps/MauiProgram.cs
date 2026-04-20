@@ -52,12 +52,14 @@ public static class MauiProgram
         builder.Services.AddTransient<RegisterViewModel>();
         builder.Services.AddTransient<DashboardViewModel>();
         builder.Services.AddTransient<EventsViewModel>();
+        builder.Services.AddTransient<CreateEventViewModel>();
 
         // ── Views (Transient) ─────────────────────────────────────────────────
         builder.Services.AddTransient<LoginView>();
         builder.Services.AddTransient<RegisterView>();
         builder.Services.AddTransient<DashboardView>();
         builder.Services.AddTransient<EventsView>();
+        builder.Services.AddTransient<CreateEventView>();
 
         // ── Entry handler — remove platform-native borders / underlines ───────
         // Our Border wrapper is the sole visual frame for input fields.

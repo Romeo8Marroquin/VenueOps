@@ -21,4 +21,13 @@ public sealed class EventsService(IHttpClientFactory factory) : IEventsService
         if (!response.IsSuccessStatusCode) return null;
         return await response.Content.ReadFromJsonAsync<PagedResult<RecentEvent>>(ct);
     }
+
+    public async Task<CreateEventResponse?> CreateEventAsync(
+        CreateEventRequest request,
+        CancellationToken ct = default)
+    {
+        var response = await _http.PostAsJsonAsync("events/new", request, ct);
+        if (!response.IsSuccessStatusCode) return null;
+        return await response.Content.ReadFromJsonAsync<CreateEventResponse>(ct);
+    }
 }
