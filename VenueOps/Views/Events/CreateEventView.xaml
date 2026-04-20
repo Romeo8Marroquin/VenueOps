@@ -106,8 +106,7 @@
                                 <Border Padding="0" Style="{StaticResource InputBorder}">
                                     <Picker
                                         ItemsSource="{Binding StatusOptions}"
-                                        SelectedItem="{Binding Status}"
-                                        Title="Select status"/>
+                                        SelectedItem="{Binding Status}"/>
                                 </Border>
                             </VerticalStackLayout>
                             <VerticalStackLayout Grid.Column="1" Spacing="6">
@@ -128,10 +127,16 @@
                                 <Label Text="Start Date &amp; Time *" Style="{StaticResource FieldLabel}"/>
                                 <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
                                     <Border Grid.Column="0" Padding="0" Style="{StaticResource InputBorder}">
-                                        <DatePicker Date="{Binding StartDate}"/>
+                                        <DatePicker
+                                            Date="{Binding StartDate}"
+                                            HorizontalOptions="Fill"
+                                            VerticalOptions="Fill"/>
                                     </Border>
                                     <Border Grid.Column="1" Padding="0" Style="{StaticResource InputBorder}">
-                                        <TimePicker Time="{Binding StartTime}"/>
+                                        <TimePicker
+                                            Time="{Binding StartTime}"
+                                            HorizontalOptions="Fill"
+                                            VerticalOptions="Fill"/>
                                     </Border>
                                 </Grid>
                             </VerticalStackLayout>
@@ -139,10 +144,16 @@
                                 <Label Text="End Date &amp; Time *" Style="{StaticResource FieldLabel}"/>
                                 <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
                                     <Border Grid.Column="0" Padding="0" Style="{StaticResource InputBorder}">
-                                        <DatePicker Date="{Binding EndDate}"/>
+                                        <DatePicker
+                                            Date="{Binding EndDate}"
+                                            HorizontalOptions="Fill"
+                                            VerticalOptions="Fill"/>
                                     </Border>
                                     <Border Grid.Column="1" Padding="0" Style="{StaticResource InputBorder}">
-                                        <TimePicker Time="{Binding EndTime}"/>
+                                        <TimePicker
+                                            Time="{Binding EndTime}"
+                                            HorizontalOptions="Fill"
+                                            VerticalOptions="Fill"/>
                                     </Border>
                                 </Grid>
                             </VerticalStackLayout>
