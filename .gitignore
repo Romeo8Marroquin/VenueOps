@@ -91,6 +91,10 @@ desktop.ini
 !.vscode/settings.json
 !.vscode/launch.json
 !.vscode/tasks.json
+
+# Claude
+.claude/*
+**/CLAUDE.md
  
 # JetBrains
 .idea/
