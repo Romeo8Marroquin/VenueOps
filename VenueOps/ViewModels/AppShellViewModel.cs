@@ -5,7 +5,7 @@ namespace VenueOps.ViewModels;
 
 /// <summary>
 /// ViewModel for the AppShell flyout footer.
-/// Singleton — lives for the entire authenticated session.
+/// Registered as Singleton in MauiProgram.cs — tied to the AppShell singleton.
 /// </summary>
 public partial class AppShellViewModel : BaseViewModel
 {
@@ -16,6 +16,15 @@ public partial class AppShellViewModel : BaseViewModel
     {
         _navigationService = navigationService;
         _sessionService    = sessionService;
+        _sessionService.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(ISessionService.CurrentUser))
+            {
+                OnPropertyChanged(nameof(UserName));
+                OnPropertyChanged(nameof(ShortEmail));
+                OnPropertyChanged(nameof(UserInitial));
+            }
+        };
     }
 
     /// <summary>Display name shown in the flyout footer.</summary>
@@ -46,17 +55,6 @@ public partial class AppShellViewModel : BaseViewModel
             var name = _sessionService.CurrentUser?.Name ?? "U";
             return name.Length > 0 ? name[0].ToString().ToUpperInvariant() : "U";
         }
-    }
-
-    /// <summary>
-    /// Called by NavigationService after a successful login so the
-    /// footer reflects the newly signed-in user without recreating the Shell.
-    /// </summary>
-    public void RefreshUserInfo()
-    {
-        OnPropertyChanged(nameof(UserName));
-        OnPropertyChanged(nameof(ShortEmail));
-        OnPropertyChanged(nameof(UserInitial));
     }
 
     [RelayCommand]

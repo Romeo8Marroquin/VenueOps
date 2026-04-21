@@ -91,6 +91,10 @@ desktop.ini
 !.vscode/settings.json
 !.vscode/launch.json
 !.vscode/tasks.json
+
+# Claude
+.claude/*
+**/CLAUDE.md
  
 # JetBrains
 .idea/
@@ -102,6 +106,9 @@ desktop.ini
 *.orig
 *.cache
  
+# Local config overrides (never commit)
+**/ApiConfig.Local.cs
+
 # Local temporal files
 tmp/
 temp/

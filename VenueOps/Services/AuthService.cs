@@ -7,28 +7,33 @@ public sealed class AuthService(IHttpClientFactory factory) : IAuthService
 {
     private readonly HttpClient _http = factory.CreateClient("VenueOpsApi");
 
-    public async Task<LoginResponse?> LoginAsync(LoginRequest request, CancellationToken ct = default)
+    public async Task<LoginResponse> LoginAsync(LoginRequest request, CancellationToken ct = default)
     {
         var httpResponse = await _http.PostAsJsonAsync("auth/sign-in", request, ct);
 
         if (!httpResponse.IsSuccessStatusCode)
-            return null;
+            throw new AuthException(httpResponse.StatusCode);
 
         var result = await httpResponse.Content.ReadFromJsonAsync<LoginResponse>(ct);
 
-        // Only return a result when the API also reports success in the body
-        return result?.Success == true ? result : null;
+        if (result?.Success != true)
+            throw new AuthException();
+
+        return result;
     }
 
-    public async Task<RegisterResponse?> RegisterAsync(RegisterRequest request, CancellationToken ct = default)
+    public async Task<RegisterResponse> RegisterAsync(RegisterRequest request, CancellationToken ct = default)
     {
         var httpResponse = await _http.PostAsJsonAsync("auth/sign-up", request, ct);
 
         if (!httpResponse.IsSuccessStatusCode)
-            return null;
+            throw new AuthException(httpResponse.StatusCode);
 
         var result = await httpResponse.Content.ReadFromJsonAsync<RegisterResponse>(ct);
 
-        return result?.Success == true ? result : null;
+        if (result?.Success != true)
+            throw new AuthException();
+
+        return result;
     }
 }

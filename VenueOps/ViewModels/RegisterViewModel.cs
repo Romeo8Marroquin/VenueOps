@@ -1,3 +1,4 @@
+using System.Net;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using VenueOps.Models;
@@ -76,29 +77,29 @@ public partial class RegisterViewModel : BaseViewModel
                 PasswordConfirmation = PasswordConfirmation
             };
 
-            RegisterResponse? response = await _authService.RegisterAsync(request);
+            RegisterResponse response = await _authService.RegisterAsync(request);
 
-            if (response is not null)
+            Password             = string.Empty;
+            PasswordConfirmation = string.Empty;
+
+            IsBusy = false; // stop spinner before dialog
+            await _dialogService.ShowAlertAsync(
+                "Account created",
+                $"Welcome, {response.User!.Name}! You can now sign in.",
+                "Sign in");
+
+            await _navigationService.NavigateToLoginAsync();
+        }
+        catch (AuthException ex)
+        {
+            IsBusy = false;
+            var message = ex.StatusCode switch
             {
-                Password             = string.Empty;
-                PasswordConfirmation = string.Empty;
-
-                IsBusy = false; // stop spinner before dialog
-                await _dialogService.ShowAlertAsync(
-                    "Account created",
-                    $"Welcome, {response.User!.Name}! You can now sign in.",
-                    "Sign in");
-
-                await _navigationService.NavigateToLoginAsync();
-            }
-            else
-            {
-                IsBusy = false;
-                await _dialogService.ShowAlertAsync(
-                    "Registration failed",
-                    "We couldn't create your account. Please try again.",
-                    "OK");
-            }
+                HttpStatusCode.Conflict              => "An account with this email already exists.",
+                >= HttpStatusCode.InternalServerError => "Server error. Please try again later.",
+                _                                    => "Registration failed. Please try again."
+            };
+            await _dialogService.ShowAlertAsync("Registration failed", message, "OK");
         }
         catch (HttpRequestException)
         {
