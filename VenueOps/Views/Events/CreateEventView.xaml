@@ -11,6 +11,40 @@
     x:Name="DialogCard"
     BackgroundColor="Transparent">
 
+    <toolkit:Popup.Resources>
+        <ResourceDictionary>
+            <Style x:Key="SectionHeader" TargetType="Label">
+                <Setter Property="FontFamily" Value="OpenSansSemibold"/>
+                <Setter Property="FontSize" Value="11"/>
+                <Setter Property="CharacterSpacing" Value="0.8"/>
+                <Setter Property="TextColor"
+                        Value="{AppThemeBinding Light={StaticResource BrandMid},
+                                                Dark={StaticResource BrandLight}}"/>
+            </Style>
+
+            <Style x:Key="RemoveButton" TargetType="Button">
+                <Setter Property="Text" Value="−"/>
+                <Setter Property="BackgroundColor" Value="Transparent"/>
+                <Setter Property="TextColor"
+                        Value="{AppThemeBinding Light={StaticResource Error},
+                                                Dark={StaticResource ErrorDark}}"/>
+                <Setter Property="BorderColor"
+                        Value="{AppThemeBinding Light={StaticResource Error},
+                                                Dark={StaticResource ErrorDark}}"/>
+                <Setter Property="BorderWidth" Value="1.5"/>
+                <Setter Property="WidthRequest" Value="40"/>
+                <Setter Property="HeightRequest" Value="40"/>
+                <Setter Property="Padding" Value="0"/>
+                <Setter Property="CornerRadius" Value="8"/>
+                <Setter Property="FontSize" Value="20"/>
+                <Setter Property="FontFamily" Value="OpenSansSemibold"/>
+                <Setter Property="VerticalOptions" Value="Center"/>
+                <Setter Property="MinimumHeightRequest" Value="40"/>
+                <Setter Property="MinimumWidthRequest" Value="40"/>
+            </Style>
+        </ResourceDictionary>
+    </toolkit:Popup.Resources>
+
     <Border
         x:Name="RootBorder"
         StrokeShape="RoundRectangle 16"
@@ -21,17 +55,11 @@
                                           Dark={StaticResource SurfaceDark}}"
         Padding="0">
 
-        <!--
-            Single ScrollView wraps everything — header, form, and footer move
-            together as one unit. The Border is content-sized up to
-            MaximumHeightRequest (set from code-behind), so on large windows
-            there is no scroll at all; on small windows the whole modal scrolls.
-        -->
-        <ScrollView Orientation="Both">
+        <ScrollView>
             <VerticalStackLayout Spacing="0">
 
                 <!-- ════════════════════════════════════════════════════════
-                     HEADER — title + dismiss (✕)
+                     HEADER
                      ════════════════════════════════════════════════════════ -->
                 <Grid ColumnDefinitions="*,Auto" Padding="24,20,16,20">
 
@@ -60,44 +88,95 @@
 
                 </Grid>
 
-                <BoxView
-                    HeightRequest="1"
-                    Color="{AppThemeBinding Light={StaticResource BorderLight},
-                                            Dark={StaticResource BorderDark}}"/>
+                <BoxView HeightRequest="1"/>
 
                 <!-- ════════════════════════════════════════════════════════
-                     FORM BODY — two layouts toggled by IsWideLayout
+                     FORM BODY
                      ════════════════════════════════════════════════════════ -->
-                <VerticalStackLayout Padding="24,20,24,12">
+                <VerticalStackLayout Padding="24,20,24,12" Spacing="24">
 
-                    <!-- ── WIDE layout (≥ 480 dp popup width): 2 cols ───────── -->
-                    <VerticalStackLayout IsVisible="{Binding IsWideLayout}" Spacing="18">
+                    <!-- ─────────────────────────────────────────────────────
+                         SECTION: BASIC INFO
+                         ───────────────────────────────────────────────────── -->
+                    <VerticalStackLayout Spacing="14">
 
-                        <!-- Event Name | Venue Name -->
-                        <Grid ColumnDefinitions="*,*" ColumnSpacing="14">
-                            <VerticalStackLayout Grid.Column="0" Spacing="6">
+                        <!-- Section header -->
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="BASIC INFO" Style="{StaticResource SectionHeader}"/>
+                            <BoxView HeightRequest="1"/>
+                        </VerticalStackLayout>
+
+                        <!-- Wide: 2-column rows -->
+                        <VerticalStackLayout IsVisible="{Binding IsWideLayout}" Spacing="14">
+
+                            <Grid ColumnDefinitions="*,*" ColumnSpacing="14">
+                                <VerticalStackLayout Grid.Column="0" Spacing="6">
+                                    <Label Text="Event Name *" Style="{StaticResource FieldLabel}"/>
+                                    <Border Padding="0" Style="{StaticResource InputBorder}">
+                                        <Entry
+                                            Placeholder="Enter the event name..."
+                                            Text="{Binding EventName}"
+                                            ReturnType="Next"/>
+                                    </Border>
+                                </VerticalStackLayout>
+                                <VerticalStackLayout Grid.Column="1" Spacing="6">
+                                    <Label Text="Venue Name *" Style="{StaticResource FieldLabel}"/>
+                                    <Border Padding="0" Style="{StaticResource InputBorder}">
+                                        <Entry
+                                            Placeholder="Enter the venue name..."
+                                            Text="{Binding VenueName}"
+                                            ReturnType="Next"/>
+                                    </Border>
+                                </VerticalStackLayout>
+                            </Grid>
+
+                            <Grid ColumnDefinitions="*,*" ColumnSpacing="14">
+                                <VerticalStackLayout Grid.Column="0" Spacing="6">
+                                    <Label Text="Status" Style="{StaticResource FieldLabel}"/>
+                                    <Border Padding="0" Style="{StaticResource InputBorder}">
+                                        <Picker
+                                            ItemsSource="{Binding StatusOptions}"
+                                            SelectedItem="{Binding Status}"/>
+                                    </Border>
+                                </VerticalStackLayout>
+                                <VerticalStackLayout Grid.Column="1" Spacing="6">
+                                    <Label Text="Expected Attendees" Style="{StaticResource FieldLabel}"/>
+                                    <Border Padding="0" Style="{StaticResource InputBorder}">
+                                        <Entry
+                                            Placeholder="0"
+                                            Text="{Binding ExpectedAttendeesText}"
+                                            Keyboard="Numeric"
+                                            ReturnType="Done"/>
+                                    </Border>
+                                </VerticalStackLayout>
+                            </Grid>
+
+                        </VerticalStackLayout>
+
+                        <!-- Compact: single-column -->
+                        <VerticalStackLayout IsVisible="{Binding IsCompactLayout}" Spacing="14">
+
+                            <VerticalStackLayout Spacing="6">
                                 <Label Text="Event Name *" Style="{StaticResource FieldLabel}"/>
                                 <Border Padding="0" Style="{StaticResource InputBorder}">
                                     <Entry
-                                        Placeholder="New event name..."
+                                        Placeholder="Summer Gala 2025"
                                         Text="{Binding EventName}"
                                         ReturnType="Next"/>
                                 </Border>
                             </VerticalStackLayout>
-                            <VerticalStackLayout Grid.Column="1" Spacing="6">
+
+                            <VerticalStackLayout Spacing="6">
                                 <Label Text="Venue Name *" Style="{StaticResource FieldLabel}"/>
                                 <Border Padding="0" Style="{StaticResource InputBorder}">
                                     <Entry
-                                        Placeholder="Venue name..."
+                                        Placeholder="Grand Ballroom"
                                         Text="{Binding VenueName}"
                                         ReturnType="Next"/>
                                 </Border>
                             </VerticalStackLayout>
-                        </Grid>
 
-                        <!-- Status | Expected Attendees -->
-                        <Grid ColumnDefinitions="*,*" ColumnSpacing="14">
-                            <VerticalStackLayout Grid.Column="0" Spacing="6">
+                            <VerticalStackLayout Spacing="6">
                                 <Label Text="Status" Style="{StaticResource FieldLabel}"/>
                                 <Border Padding="0" Style="{StaticResource InputBorder}">
                                     <Picker
@@ -105,188 +184,375 @@
                                         SelectedItem="{Binding Status}"/>
                                 </Border>
                             </VerticalStackLayout>
-                            <VerticalStackLayout Grid.Column="1" Spacing="6">
+
+                            <VerticalStackLayout Spacing="6">
                                 <Label Text="Expected Attendees" Style="{StaticResource FieldLabel}"/>
                                 <Border Padding="0" Style="{StaticResource InputBorder}">
                                     <Entry
-                                        Placeholder="Attendee count..."
-                                        Text="{Binding AttendeeCountText}"
+                                        Placeholder="0"
+                                        Text="{Binding ExpectedAttendeesText}"
                                         Keyboard="Numeric"
                                         ReturnType="Done"/>
                                 </Border>
                             </VerticalStackLayout>
-                        </Grid>
 
-                        <!-- Start Date+Time | End Date+Time -->
-                        <VerticalStackLayout Spacing="12">
-                            <VerticalStackLayout Spacing="6">
-                                <Label Text="Start Date &amp; Time *" Style="{StaticResource FieldLabel}"/>
-                                <Grid ColumnDefinitions="auto,*" ColumnSpacing="15" VerticalOptions="Center">
-                                    <Border Grid.Column="0" Style="{StaticResource InputBorder}">
-                                        <DatePicker
-                                            Date="{Binding StartDate}"
-                                            WidthRequest="150"
-                                            HeightRequest="50"/>
-                                    </Border>
-                                    <Border
-                                        Grid.Column="1"
-                                        Style="{StaticResource InputBorder}"
-                                        HorizontalOptions="Start"
-                                        VerticalOptions="Start"
-                                        Margin="0,9,0,0"
-                                        HeightRequest="35">
-                                        <TimePicker
-                                            Time="{Binding StartTime}"
-                                            Margin="0,8,0,-8"/>
-                                    </Border>
-                                </Grid>
-                            </VerticalStackLayout>
-                            <VerticalStackLayout Spacing="6">
-                                <Label Text="End Date &amp; Time *" Style="{StaticResource FieldLabel}"/>
-                                <Grid ColumnDefinitions="auto,*" ColumnSpacing="15" VerticalOptions="Center">
-                                    <Border Grid.Column="0" Style="{StaticResource InputBorder}">
-                                        <DatePicker
-                                            Date="{Binding EndDate}"
-                                            WidthRequest="150"
-                                            HeightRequest="50"/>
-                                    </Border>
-                                    <Border
-                                        Grid.Column="1"
-                                        Style="{StaticResource InputBorder}"
-                                        HorizontalOptions="Start"
-                                        VerticalOptions="Start"
-                                        Margin="0,9,0,0"
-                                        HeightRequest="35">
-                                        <TimePicker
-                                            Time="{Binding EndTime}"
-                                            Margin="0,8,0,-8"/>
-                                    </Border>
-                                </Grid>
-                            </VerticalStackLayout>
                         </VerticalStackLayout>
 
                     </VerticalStackLayout>
 
-                    <!-- ── COMPACT layout (< 480 dp popup width): 1 col ──────── -->
-                    <VerticalStackLayout IsVisible="{Binding IsCompactLayout}" Spacing="18">
+                    <!-- ─────────────────────────────────────────────────────
+                         SECTION: DATES
+                         ───────────────────────────────────────────────────── -->
+                    <VerticalStackLayout Spacing="14">
 
                         <VerticalStackLayout Spacing="6">
-                            <Label Text="Event Name *" Style="{StaticResource FieldLabel}"/>
-                            <Border Padding="0" Style="{StaticResource InputBorder}">
-                                <Entry
-                                    Placeholder="New event name..."
-                                    Text="{Binding EventName}"
-                                    ReturnType="Next"/>
-                            </Border>
+                            <Label Text="DATES" Style="{StaticResource SectionHeader}"/>
+                            <BoxView HeightRequest="1"/>
                         </VerticalStackLayout>
 
-                        <VerticalStackLayout Spacing="6">
-                            <Label Text="Venue Name *" Style="{StaticResource FieldLabel}"/>
-                            <Border Padding="0" Style="{StaticResource InputBorder}">
-                                <Entry
-                                    Placeholder="Venue name..."
-                                    Text="{Binding VenueName}"
-                                    ReturnType="Next"/>
-                            </Border>
-                        </VerticalStackLayout>
-
-                        <VerticalStackLayout Spacing="6">
-                            <Label Text="Status" Style="{StaticResource FieldLabel}"/>
-                            <Border Padding="0" Style="{StaticResource InputBorder}">
-                                <Picker
-                                    ItemsSource="{Binding StatusOptions}"
-                                    SelectedItem="{Binding Status}"
-                                    Title="Select status"/>
-                            </Border>
-                        </VerticalStackLayout>
-
+                        <!--
+                            DatePicker and TimePicker each live in their own InputBorder.
+                            Padding="10,0" on the Border adds horizontal breathing room
+                            without fighting the native control's intrinsic insets.
+                            No explicit HeightRequest or Margin overrides needed — the
+                            implicit style's MinimumHeightRequest="44" handles vertical sizing.
+                        -->
                         <VerticalStackLayout Spacing="6">
                             <Label Text="Start Date &amp; Time *" Style="{StaticResource FieldLabel}"/>
-                            <Grid ColumnDefinitions="auto,*" ColumnSpacing="15" VerticalOptions="Center">
-                                <Border Grid.Column="0" Style="{StaticResource InputBorder}">
-                                    <DatePicker
-                                        Date="{Binding StartDate}"
-                                        WidthRequest="150"
-                                        HeightRequest="50"/>
+                            <Grid ColumnDefinitions="3*,2*" ColumnSpacing="10">
+                                <Border Grid.Column="0" Style="{StaticResource InputBorder}" Padding="0">
+                                    <Grid>
+                                        <DatePicker
+                                            Date="{Binding StartDate}"
+                                            BackgroundColor="Transparent"/>
+                                    </Grid>
                                 </Border>
-                                <Border
-                                    Grid.Column="1"
-                                    Style="{StaticResource InputBorder}"
-                                    HorizontalOptions="Start"
-                                    VerticalOptions="Start"
-                                    Margin="0,9,0,0"
-                                    HeightRequest="35">
-                                    <TimePicker
-                                        Time="{Binding StartTime}"
-                                        Margin="0,8,0,-8"/>
+                                <Border Grid.Column="1" Style="{StaticResource InputBorder}" Padding="0">
+                                    <Grid>
+                                        <TimePicker
+                                            Time="{Binding StartTime}"
+                                            BackgroundColor="Transparent"/>
+                                    </Grid>
                                 </Border>
                             </Grid>
                         </VerticalStackLayout>
 
                         <VerticalStackLayout Spacing="6">
                             <Label Text="End Date &amp; Time *" Style="{StaticResource FieldLabel}"/>
-                            <Grid ColumnDefinitions="auto,*" ColumnSpacing="15" VerticalOptions="Center">
-                                <Border Grid.Column="0" Style="{StaticResource InputBorder}">
-                                    <DatePicker
-                                        Date="{Binding EndDate}"
-                                        WidthRequest="150"
-                                        HeightRequest="50"/>
+                            <Grid ColumnDefinitions="3*,2*" ColumnSpacing="10">
+                                <Border Grid.Column="0" Style="{StaticResource InputBorder}" Padding="0">
+                                    <Grid>
+                                        <DatePicker
+                                            Date="{Binding EndDate}"
+                                            BackgroundColor="Transparent"/>
+                                    </Grid>
                                 </Border>
-                                <Border
-                                    Grid.Column="1"
-                                    Style="{StaticResource InputBorder}"
-                                    HorizontalOptions="Start"
-                                    VerticalOptions="Start"
-                                    Margin="0,9,0,0"
-                                    HeightRequest="35">
-                                    <TimePicker
-                                        Time="{Binding EndTime}"
-                                        Margin="0,8,0,-8"/>
+                                <Border Grid.Column="1" Style="{StaticResource InputBorder}" Padding="0">
+                                    <Grid>
+                                        <TimePicker
+                                            Time="{Binding EndTime}"
+                                            BackgroundColor="Transparent"/>
+                                    </Grid>
                                 </Border>
                             </Grid>
                         </VerticalStackLayout>
 
+                    </VerticalStackLayout>
+
+                    <!-- ─────────────────────────────────────────────────────
+                         SECTION: DESCRIPTION
+                         ───────────────────────────────────────────────────── -->
+                    <VerticalStackLayout Spacing="14">
+
                         <VerticalStackLayout Spacing="6">
-                            <Label Text="Expected Attendees" Style="{StaticResource FieldLabel}"/>
-                            <Border Padding="0" Style="{StaticResource InputBorder}">
-                                <Entry
-                                    Placeholder="Attendee count..."
-                                    Text="{Binding AttendeeCountText}"
-                                    Keyboard="Numeric"
-                                    ReturnType="Done"/>
+                            <Label Text="DESCRIPTION" Style="{StaticResource SectionHeader}"/>
+                            <BoxView HeightRequest="1"/>
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="Short Description" Style="{StaticResource FieldLabel}"/>
+                            <!--
+                                Editor inside InputBorder: override Padding to give
+                                natural breathing room for multiline text.
+                            -->
+                            <Border Style="{StaticResource InputBorder}" Padding="0">
+                                <Editor
+                                    Placeholder="A brief summary of the event..."
+                                    Text="{Binding ShortDescription}"
+                                    MinimumHeightRequest="88"
+                                    AutoSize="TextChanges"/>
                             </Border>
                         </VerticalStackLayout>
 
                     </VerticalStackLayout>
 
-                    <!-- ── Validation error ───────────────────────────────────── -->
+                    <!-- ─────────────────────────────────────────────────────
+                         SECTION: LOCATION
+                         ───────────────────────────────────────────────────── -->
+                    <VerticalStackLayout Spacing="14">
+
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="LOCATION" Style="{StaticResource SectionHeader}"/>
+                            <BoxView HeightRequest="1"/>
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="Address" Style="{StaticResource FieldLabel}"/>
+                            <Border Padding="0" Style="{StaticResource InputBorder}">
+                                <Entry
+                                    Placeholder="Street, City, Country..."
+                                    Text="{Binding LocationAddress}"
+                                    ReturnType="Next"/>
+                            </Border>
+                        </VerticalStackLayout>
+
+                    </VerticalStackLayout>
+
+                    <!-- ─────────────────────────────────────────────────────
+                         SECTION: ORGANIZER
+                         ───────────────────────────────────────────────────── -->
+                    <VerticalStackLayout Spacing="14">
+
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="ORGANIZER" Style="{StaticResource SectionHeader}"/>
+                            <BoxView HeightRequest="1"/>
+                        </VerticalStackLayout>
+
+                        <!-- Wide: Name | Website side by side -->
+                        <Grid ColumnDefinitions="*,*" ColumnSpacing="14"
+                              IsVisible="{Binding IsWideLayout}">
+                            <VerticalStackLayout Grid.Column="0" Spacing="6">
+                                <Label Text="Name" Style="{StaticResource FieldLabel}"/>
+                                <Border Padding="0" Style="{StaticResource InputBorder}">
+                                    <Entry
+                                        Placeholder="Enter the organizer name..."
+                                        Text="{Binding OrganizerName}"
+                                        ReturnType="Next"/>
+                                </Border>
+                            </VerticalStackLayout>
+                            <VerticalStackLayout Grid.Column="1" Spacing="6">
+                                <Label Text="Website URL" Style="{StaticResource FieldLabel}"/>
+                                <Border Padding="0" Style="{StaticResource InputBorder}">
+                                    <Entry
+                                        Placeholder="https://example.com"
+                                        Text="{Binding OrganizerWebsite}"
+                                        Keyboard="Url"
+                                        ReturnType="Done"/>
+                                </Border>
+                            </VerticalStackLayout>
+                        </Grid>
+
+                        <!-- Compact: stacked -->
+                        <VerticalStackLayout Spacing="14" IsVisible="{Binding IsCompactLayout}">
+                            <VerticalStackLayout Spacing="6">
+                                <Label Text="Name" Style="{StaticResource FieldLabel}"/>
+                                <Border Padding="0" Style="{StaticResource InputBorder}">
+                                    <Entry
+                                        Placeholder="Enter the organizer name..."
+                                        Text="{Binding OrganizerName}"
+                                        ReturnType="Next"/>
+                                </Border>
+                            </VerticalStackLayout>
+                            <VerticalStackLayout Spacing="6">
+                                <Label Text="Website URL" Style="{StaticResource FieldLabel}"/>
+                                <Border Padding="0" Style="{StaticResource InputBorder}">
+                                    <Entry
+                                        Placeholder="https://example.com"
+                                        Text="{Binding OrganizerWebsite}"
+                                        Keyboard="Url"
+                                        ReturnType="Done"/>
+                                </Border>
+                            </VerticalStackLayout>
+                        </VerticalStackLayout>
+
+                    </VerticalStackLayout>
+
+                    <!-- ─────────────────────────────────────────────────────
+                         SECTION: TAGS
+                         ───────────────────────────────────────────────────── -->
+                    <VerticalStackLayout Spacing="14">
+
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="TAGS" Style="{StaticResource SectionHeader}"/>
+                            <BoxView HeightRequest="1"/>
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="Tags" Style="{StaticResource FieldLabel}"/>
+                            <Border Padding="0" Style="{StaticResource InputBorder}">
+                                <Entry
+                                    Placeholder="music, outdoor, family-friendly..."
+                                    Text="{Binding TagsText}"
+                                    ReturnType="Done"/>
+                            </Border>
+                            <Label
+                                Text="Separate multiple tags with commas"
+                                Style="{StaticResource Caption}"
+                                Margin="2,0,0,0"/>
+                        </VerticalStackLayout>
+
+                    </VerticalStackLayout>
+
+                    <!-- ─────────────────────────────────────────────────────
+                         SECTION: LINKS
+                         ───────────────────────────────────────────────────── -->
+                    <VerticalStackLayout Spacing="14">
+
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="LINKS" Style="{StaticResource SectionHeader}"/>
+                            <BoxView HeightRequest="1"/>
+                        </VerticalStackLayout>
+
+                        <!--
+                            Each row: [Label entry] [URL entry] [Remove button]
+                            CommandParameter="{Binding .}" passes the LinkItem instance
+                            to RemoveLinkCommand via x:Reference to the root Popup.
+                        -->
+                        <VerticalStackLayout Spacing="10" BindableLayout.ItemsSource="{Binding Links}">
+                            <BindableLayout.ItemTemplate>
+                                <DataTemplate x:DataType="vm:LinkItem">
+                                    <Grid ColumnDefinitions="*,*,Auto" ColumnSpacing="8">
+                                        <Border Grid.Column="0" Padding="0" Style="{StaticResource InputBorder}">
+                                            <Entry
+                                                Placeholder="Link label..."
+                                                Text="{Binding Label}"
+                                                ReturnType="Next"/>
+                                        </Border>
+                                        <Border Grid.Column="1" Padding="0" Style="{StaticResource InputBorder}">
+                                            <Entry
+                                                Placeholder="Enter link URL..."
+                                                Text="{Binding Url}"
+                                                Keyboard="Url"
+                                                ReturnType="Done"/>
+                                        </Border>
+                                        <Button
+                                            Grid.Column="2"
+                                            Style="{StaticResource RemoveButton}"
+                                            Command="{Binding Source={x:Reference DialogCard}, Path=BindingContext.RemoveLinkCommand}"
+                                            CommandParameter="{Binding .}"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </BindableLayout.ItemTemplate>
+                        </VerticalStackLayout>
+
+                        <Button
+                            Text="+ Add Link"
+                            Command="{Binding AddLinkCommand}"
+                            Style="{StaticResource OutlineButton}"
+                            FontSize="13"
+                            Padding="14,8"
+                            MinimumHeightRequest="40"
+                            HorizontalOptions="Start"/>
+
+                    </VerticalStackLayout>
+
+                    <!-- ─────────────────────────────────────────────────────
+                         SECTION: IMAGES
+                         ───────────────────────────────────────────────────── -->
+                    <VerticalStackLayout Spacing="14">
+
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="IMAGES" Style="{StaticResource SectionHeader}"/>
+                            <BoxView HeightRequest="1"/>
+                        </VerticalStackLayout>
+
+                        <Label
+                            Text="The first image will be used as the event banner. All others appear in the gallery."
+                            Style="{StaticResource Caption}"
+                            LineBreakMode="WordWrap"
+                            Margin="0,0,0,4"/>
+
+                        <!--
+                            Each image item: URL (top row with remove) + AltText | Credit (second row).
+                            Wrapped in a lightly styled border to visually group the 3 fields per item.
+                        -->
+                        <VerticalStackLayout Spacing="12" BindableLayout.ItemsSource="{Binding Images}">
+                            <BindableLayout.ItemTemplate>
+                                <DataTemplate x:DataType="vm:ImageItem">
+                                    <Border
+                                        StrokeShape="RoundRectangle 10"
+                                        StrokeThickness="1"
+                                        Stroke="{AppThemeBinding Light={StaticResource BorderLight},
+                                                                 Dark={StaticResource BorderDark}}"
+                                        BackgroundColor="{AppThemeBinding
+                                            Light={StaticResource Gray100},
+                                            Dark={StaticResource SurfaceVariantDark}}"
+                                        Padding="12,10">
+                                        <VerticalStackLayout Spacing="8">
+
+                                            <!-- URL row -->
+                                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                                <Border Grid.Column="0" Padding="0" Style="{StaticResource InputBorder}">
+                                                    <Entry
+                                                        Placeholder="Enter image URL..."
+                                                        Text="{Binding Url}"
+                                                        Keyboard="Url"
+                                                        ReturnType="Next"/>
+                                                </Border>
+                                                <Button
+                                                    Grid.Column="1"
+                                                    Style="{StaticResource RemoveButton}"
+                                                    Command="{Binding Source={x:Reference DialogCard}, Path=BindingContext.RemoveImageCommand}"
+                                                    CommandParameter="{Binding .}"/>
+                                            </Grid>
+
+                                            <!-- Alt text + Credit row -->
+                                            <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                                                <Border Grid.Column="0" Padding="0" Style="{StaticResource InputBorder}">
+                                                    <Entry
+                                                        Placeholder="Alt text (optional)"
+                                                        Text="{Binding AltText}"
+                                                        ReturnType="Next"/>
+                                                </Border>
+                                                <Border Grid.Column="1" Padding="0" Style="{StaticResource InputBorder}">
+                                                    <Entry
+                                                        Placeholder="Photo credit (optional)"
+                                                        Text="{Binding Credit}"
+                                                        ReturnType="Done"/>
+                                                </Border>
+                                            </Grid>
+
+                                        </VerticalStackLayout>
+                                    </Border>
+                                </DataTemplate>
+                            </BindableLayout.ItemTemplate>
+                        </VerticalStackLayout>
+
+                        <Button
+                            Text="+ Add Image"
+                            Command="{Binding AddImageCommand}"
+                            Style="{StaticResource OutlineButton}"
+                            FontSize="13"
+                            Padding="14,8"
+                            MinimumHeightRequest="40"
+                            HorizontalOptions="Start"/>
+
+                    </VerticalStackLayout>
+
+                    <!-- ── Validation error ───────────────────────────────── -->
                     <Label
                         Text="{Binding ErrorMessage}"
                         Style="{StaticResource ErrorText}"
                         IsVisible="{Binding HasError}"
-                        Margin="0,8,0,0"/>
+                        Margin="0,4,0,0"/>
 
-                    <!-- ── Loading indicator ──────────────────────────────────── -->
+                    <!-- ── Loading indicator ──────────────────────────────── -->
                     <ActivityIndicator
                         IsRunning="{Binding IsBusy}"
                         IsVisible="{Binding IsBusy}"
-                        HorizontalOptions="Center"
-                        Margin="0,8,0,0"/>
+                        HorizontalOptions="Center"/>
 
                 </VerticalStackLayout>
 
                 <!-- ════════════════════════════════════════════════════════
                      FOOTER — Cancel + Create buttons
                      ════════════════════════════════════════════════════════ -->
-                <BoxView
-                    HeightRequest="1"
-                    Color="{AppThemeBinding Light={StaticResource BorderLight},
-                                            Dark={StaticResource BorderDark}}"/>
+                <BoxView HeightRequest="1"/>
 
                 <Grid
                     ColumnDefinitions="*,*"
                     ColumnSpacing="12"
-                    Padding="24,25,24,20">
+                    Padding="24,16,24,20">
 
                     <Button
                         Grid.Column="0"
@@ -298,7 +564,8 @@
                     <Button
                         Grid.Column="1"
                         Text="Create Event"
-                        Command="{Binding SubmitCommand}"/>
+                        Command="{Binding SubmitCommand}"
+                        IsEnabled="{Binding IsNotBusy}"/>
 
                 </Grid>
 

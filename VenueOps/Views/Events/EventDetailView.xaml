@@ -14,7 +14,9 @@
 
         <!-- ── Converters ──────────────────────────────────────────────── -->
         <conv:UtcToLocalConverter x:Key="UtcToLocal" Format="MMM d, h:mm tt"/>
-        <conv:EventStatusConverter x:Key="EventStatus"/>
+        <conv:EventStatusBackgroundConverter x:Key="EventStatusBackground"/>
+        <conv:EventStatusTextConverter      x:Key="EventStatusText"/>
+        <conv:EventStatusLabelConverter     x:Key="EventStatusLabel"/>
 
         <!-- ── Section card header label ───────────────────────────────── -->
         <Style x:Key="CardSectionLabel" TargetType="Label">
@@ -59,6 +61,7 @@
                     Value="{AppThemeBinding Light={StaticResource SurfaceLight},
                                             Dark={StaticResource SurfaceDark}}"/>
             <Setter Property="Padding" Value="14,12"/>
+            <Setter Property="MinimumHeightRequest" Value="72"/>
         </Style>
 
         <!-- ── Detail field key (compact layout left column) ──────────── -->
@@ -242,16 +245,16 @@
                                     Padding="8,4"
                                     HorizontalOptions="Start"
                                     BackgroundColor="{Binding Detail.Status,
-                                        Converter={StaticResource EventStatus},
+                                        Converter={StaticResource EventStatusBackground},
                                         ConverterParameter=background}">
                                     <Label
                                         Text="{Binding Detail.Status,
-                                            Converter={StaticResource EventStatus},
+                                            Converter={StaticResource EventStatusLabel},
                                             ConverterParameter=label}"
                                         FontFamily="OpenSansSemibold"
                                         FontSize="12"
                                         TextColor="{Binding Detail.Status,
-                                            Converter={StaticResource EventStatus},
+                                            Converter={StaticResource EventStatusText},
                                             ConverterParameter=text}"/>
                                 </Border>
                             </VerticalStackLayout>
@@ -507,16 +510,16 @@
                                     Padding="10,5"
                                     HorizontalOptions="Start"
                                     BackgroundColor="{Binding Detail.Status,
-                                        Converter={StaticResource EventStatus},
+                                        Converter={StaticResource EventStatusBackground},
                                         ConverterParameter=background}">
                                     <Label
                                         Text="{Binding Detail.Status,
-                                            Converter={StaticResource EventStatus},
+                                            Converter={StaticResource EventStatusLabel},
                                             ConverterParameter=label}"
                                         FontFamily="OpenSansSemibold"
                                         FontSize="12"
                                         TextColor="{Binding Detail.Status,
-                                            Converter={StaticResource EventStatus},
+                                            Converter={StaticResource EventStatusText},
                                             ConverterParameter=text}"/>
                                 </Border>
                             </VerticalStackLayout>
@@ -541,30 +544,30 @@
                             Margin="16,16,16,0">
 
                             <Border Grid.Column="0" Style="{StaticResource StatTile}">
-                                <VerticalStackLayout Spacing="0">
+                                <VerticalStackLayout Spacing="0" VerticalOptions="Center">
                                     <Label Text="DATE" Style="{StaticResource TileKey}"/>
-                                    <Label Text="{Binding DateRangeDisplay}" Style="{StaticResource TileValue}"/>
+                                    <Label Text="{Binding DateRangeDisplay}" Style="{StaticResource TileValue}" MaxLines="2"/>
                                 </VerticalStackLayout>
                             </Border>
 
                             <Border Grid.Column="1" Style="{StaticResource StatTile}">
-                                <VerticalStackLayout Spacing="0">
+                                <VerticalStackLayout Spacing="0" VerticalOptions="Center">
                                     <Label Text="VENUE" Style="{StaticResource TileKey}"/>
-                                    <Label Text="{Binding Detail.VenueName}" Style="{StaticResource TileValue}"/>
+                                    <Label Text="{Binding Detail.VenueName}" Style="{StaticResource TileValue}" MaxLines="2"/>
                                 </VerticalStackLayout>
                             </Border>
 
                             <Border Grid.Column="2" Style="{StaticResource StatTile}">
-                                <VerticalStackLayout Spacing="0">
+                                <VerticalStackLayout Spacing="0" VerticalOptions="Center">
                                     <Label Text="{Binding AttendeesLabel}" Style="{StaticResource TileKey}"/>
-                                    <Label Text="{Binding AttendeesDisplay}" Style="{StaticResource TileValue}"/>
+                                    <Label Text="{Binding AttendeesDisplay}" Style="{StaticResource TileValue}" MaxLines="2"/>
                                 </VerticalStackLayout>
                             </Border>
 
                             <Border Grid.Column="3" Style="{StaticResource StatTile}">
-                                <VerticalStackLayout Spacing="0">
+                                <VerticalStackLayout Spacing="0" VerticalOptions="Center">
                                     <Label Text="BOOKING REF" Style="{StaticResource TileKey}"/>
-                                    <Label Text="{Binding Detail.BookingReference}" Style="{StaticResource TileValue}"/>
+                                    <Label Text="{Binding Detail.BookingReference}" Style="{StaticResource TileValue}" MaxLines="2"/>
                                 </VerticalStackLayout>
                             </Border>
 
@@ -574,164 +577,181 @@
                         <!--
                             Left (3*):  narrative sections — About, Location, Organizer
                             Right (2*): structured data   — Tags, Links
+
+                            Rows are paired so card tops and bottoms align:
+                              Row 0: About     | Tags
+                              Row 1: Location  | Links (RowSpan=2)
+                              Row 2: Organizer | ↑ Links continues
                         -->
                         <Grid
                             ColumnDefinitions="3*,2*"
+                            RowDefinitions="Auto,Auto,Auto"
                             ColumnSpacing="14"
+                            RowSpacing="14"
                             Margin="16,14,16,0">
 
-                            <!-- Left column -->
-                            <VerticalStackLayout Grid.Column="0" Spacing="14">
+                            <!-- Row 0, Col 0 — About -->
+                            <Border
+                                Grid.Row="0" Grid.Column="0"
+                                Style="{StaticResource Card}"
+                                IsVisible="{Binding HasDescription}"
+                                VerticalOptions="Fill">
+                                <VerticalStackLayout Spacing="0">
+                                    <Label Text="ABOUT" Style="{StaticResource CardSectionLabel}"/>
+                                    <BoxView HeightRequest="1" Margin="0,0,0,14"/>
+                                    <Label
+                                        Text="{Binding Detail.ShortDescription}"
+                                        Style="{StaticResource BodySecondary}"
+                                        LineBreakMode="WordWrap"
+                                        FontSize="14"/>
+                                </VerticalStackLayout>
+                            </Border>
 
-                                <!-- About -->
-                                <Border Style="{StaticResource Card}" IsVisible="{Binding HasDescription}">
-                                    <VerticalStackLayout Spacing="0">
-                                        <Label Text="ABOUT" Style="{StaticResource CardSectionLabel}"/>
-                                        <BoxView HeightRequest="1" Margin="0,0,0,14"/>
-                                        <Label
-                                            Text="{Binding Detail.ShortDescription}"
-                                            Style="{StaticResource BodySecondary}"
-                                            LineBreakMode="WordWrap"
-                                            FontSize="14"/>
-                                    </VerticalStackLayout>
-                                </Border>
+                            <!-- Row 0, Col 1 — Tags -->
+                            <Border
+                                Grid.Row="0" Grid.Column="1"
+                                Style="{StaticResource Card}"
+                                IsVisible="{Binding HasTags}"
+                                VerticalOptions="Fill">
+                                <VerticalStackLayout Spacing="0">
+                                    <Label Text="TAGS" Style="{StaticResource CardSectionLabel}"/>
+                                    <BoxView HeightRequest="1" Margin="0,0,0,14"/>
+                                    <FlexLayout
+                                        Wrap="Wrap"
+                                        Direction="Row"
+                                        JustifyContent="Start"
+                                        AlignItems="Center"
+                                        BindableLayout.ItemsSource="{Binding Detail.Tags}">
+                                        <BindableLayout.ItemTemplate>
+                                            <DataTemplate x:DataType="x:String">
+                                                <Border
+                                                    Margin="0,0,6,6"
+                                                    StrokeShape="RoundRectangle 6"
+                                                    StrokeThickness="1"
+                                                    Stroke="{AppThemeBinding
+                                                        Light={StaticResource BrandLight},
+                                                        Dark={StaticResource BorderDark}}"
+                                                    BackgroundColor="{AppThemeBinding
+                                                        Light={StaticResource Gray100},
+                                                        Dark={StaticResource SurfaceVariantDark}}"
+                                                    Padding="10,5">
+                                                    <Label
+                                                        Text="{Binding .}"
+                                                        FontFamily="OpenSansRegular"
+                                                        FontSize="12"
+                                                        TextColor="{AppThemeBinding
+                                                            Light={StaticResource TextSecondaryLight},
+                                                            Dark={StaticResource TextSecondaryDark}}"/>
+                                                </Border>
+                                            </DataTemplate>
+                                        </BindableLayout.ItemTemplate>
+                                    </FlexLayout>
+                                </VerticalStackLayout>
+                            </Border>
 
-                                <!-- Location -->
-                                <Border Style="{StaticResource Card}" IsVisible="{Binding HasLocation}">
-                                    <VerticalStackLayout Spacing="0">
-                                        <Label Text="LOCATION" Style="{StaticResource CardSectionLabel}"/>
-                                        <BoxView HeightRequest="1" Margin="0,0,0,14"/>
-                                        <Label
-                                            Text="{Binding Detail.Location.FormattedAddress}"
-                                            Style="{StaticResource BodySecondary}"
-                                            LineBreakMode="WordWrap"
-                                            FontSize="14"/>
-                                    </VerticalStackLayout>
-                                </Border>
+                            <!-- Row 1, Col 0 — Location -->
+                            <Border
+                                Grid.Row="1" Grid.Column="0"
+                                Style="{StaticResource Card}"
+                                IsVisible="{Binding HasLocation}"
+                                VerticalOptions="Fill">
+                                <VerticalStackLayout Spacing="0">
+                                    <Label Text="LOCATION" Style="{StaticResource CardSectionLabel}"/>
+                                    <BoxView HeightRequest="1" Margin="0,0,0,14"/>
+                                    <Label
+                                        Text="{Binding Detail.Location.FormattedAddress}"
+                                        Style="{StaticResource BodySecondary}"
+                                        LineBreakMode="WordWrap"
+                                        FontSize="14"/>
+                                </VerticalStackLayout>
+                            </Border>
 
-                                <!-- Organizer -->
-                                <Border Style="{StaticResource Card}" IsVisible="{Binding HasOrganizer}">
-                                    <VerticalStackLayout Spacing="0">
-                                        <Label Text="ORGANIZER" Style="{StaticResource CardSectionLabel}"/>
-                                        <BoxView HeightRequest="1" Margin="0,0,0,14"/>
-                                        <Label
-                                            Text="{Binding Detail.Organizer.Name}"
-                                            FontFamily="OpenSansSemibold"
-                                            FontSize="15"
-                                            TextColor="{AppThemeBinding
-                                                Light={StaticResource TextPrimaryLight},
-                                                Dark={StaticResource TextPrimaryDark}}"/>
-                                        <Label
-                                            Text="{Binding Detail.Organizer.WebsiteUrl}"
-                                            IsVisible="{Binding OrganizerHasWebsite}"
-                                            FontSize="13"
-                                            Margin="0,6,0,0"
-                                            TextDecorations="Underline"
-                                            TextColor="{AppThemeBinding
-                                                Light={StaticResource BrandMid},
-                                                Dark={StaticResource BrandLight}}">
-                                            <Label.GestureRecognizers>
-                                                <TapGestureRecognizer
-                                                    Command="{Binding OpenLinkCommand}"
-                                                    CommandParameter="{Binding Detail.Organizer.WebsiteUrl}"/>
-                                            </Label.GestureRecognizers>
-                                        </Label>
-                                    </VerticalStackLayout>
-                                </Border>
-
-                            </VerticalStackLayout>
-
-                            <!-- Right column -->
-                            <VerticalStackLayout Grid.Column="1" Spacing="14">
-
-                                <!-- Tags -->
-                                <Border Style="{StaticResource Card}" IsVisible="{Binding HasTags}">
-                                    <VerticalStackLayout Spacing="0">
-                                        <Label Text="TAGS" Style="{StaticResource CardSectionLabel}"/>
-                                        <BoxView HeightRequest="1" Margin="0,0,0,14"/>
-                                        <FlexLayout
-                                            Wrap="Wrap"
-                                            Direction="Row"
-                                            JustifyContent="Start"
-                                            AlignItems="Center"
-                                            BindableLayout.ItemsSource="{Binding Detail.Tags}">
-                                            <BindableLayout.ItemTemplate>
-                                                <DataTemplate x:DataType="x:String">
-                                                    <Border
-                                                        Margin="0,0,6,6"
-                                                        StrokeShape="RoundRectangle 6"
-                                                        StrokeThickness="1"
-                                                        Stroke="{AppThemeBinding
-                                                            Light={StaticResource BrandLight},
-                                                            Dark={StaticResource BorderDark}}"
-                                                        BackgroundColor="{AppThemeBinding
-                                                            Light={StaticResource Gray100},
-                                                            Dark={StaticResource SurfaceVariantDark}}"
-                                                        Padding="10,5">
+                            <!-- Row 1-2, Col 1 — Links (spans rows 1 and 2 to match Location + Organizer height) -->
+                            <Border
+                                Grid.Row="1" Grid.Column="1" Grid.RowSpan="2"
+                                Style="{StaticResource Card}"
+                                IsVisible="{Binding HasLinks}"
+                                VerticalOptions="Fill">
+                                <VerticalStackLayout Spacing="0">
+                                    <Label Text="LINKS" Style="{StaticResource CardSectionLabel}"/>
+                                    <BoxView HeightRequest="1"/>
+                                    <VerticalStackLayout
+                                        Spacing="0"
+                                        BindableLayout.ItemsSource="{Binding Detail.Links}">
+                                        <BindableLayout.ItemTemplate>
+                                            <DataTemplate x:DataType="models:EventLink">
+                                                <VerticalStackLayout Spacing="0">
+                                                    <Grid
+                                                        ColumnDefinitions="Auto,*,Auto"
+                                                        Padding="0,14,0,14">
+                                                        <Grid.GestureRecognizers>
+                                                            <TapGestureRecognizer
+                                                                Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.OpenLinkCommand}"
+                                                                CommandParameter="{Binding Url}"/>
+                                                        </Grid.GestureRecognizers>
+                                                        <Image
+                                                            Grid.Column="0"
+                                                            Source="{AppThemeBinding Light=link.png, Dark=link_dark.png}"
+                                                            HeightRequest="16"
+                                                            WidthRequest="16"
+                                                            VerticalOptions="Center"
+                                                            Margin="0,0,10,0"/>
                                                         <Label
-                                                            Text="{Binding .}"
-                                                            FontFamily="OpenSansRegular"
-                                                            FontSize="12"
+                                                            Grid.Column="1"
+                                                            Text="{Binding Label}"
+                                                            Style="{StaticResource LinkLabel}"
+                                                            VerticalOptions="Center"/>
+                                                        <Label
+                                                            Grid.Column="2"
+                                                            Text="→"
+                                                            FontFamily="OpenSansSemibold"
+                                                            FontSize="16"
+                                                            VerticalOptions="Center"
                                                             TextColor="{AppThemeBinding
-                                                                Light={StaticResource TextSecondaryLight},
-                                                                Dark={StaticResource TextSecondaryDark}}"/>
-                                                    </Border>
-                                                </DataTemplate>
-                                            </BindableLayout.ItemTemplate>
-                                        </FlexLayout>
+                                                                Light={StaticResource BrandMid},
+                                                                Dark={StaticResource BrandLight}}"/>
+                                                    </Grid>
+                                                    <BoxView HeightRequest="1"/>
+                                                </VerticalStackLayout>
+                                            </DataTemplate>
+                                        </BindableLayout.ItemTemplate>
                                     </VerticalStackLayout>
-                                </Border>
+                                </VerticalStackLayout>
+                            </Border>
 
-                                <!-- Links -->
-                                <Border Style="{StaticResource Card}" IsVisible="{Binding HasLinks}">
-                                    <VerticalStackLayout Spacing="0">
-                                        <Label Text="LINKS" Style="{StaticResource CardSectionLabel}"/>
-                                        <BoxView HeightRequest="1"/>
-                                        <VerticalStackLayout
-                                            Spacing="0"
-                                            BindableLayout.ItemsSource="{Binding Detail.Links}">
-                                            <BindableLayout.ItemTemplate>
-                                                <DataTemplate x:DataType="models:EventLink">
-                                                    <VerticalStackLayout Spacing="0">
-                                                        <Grid
-                                                            ColumnDefinitions="Auto,*,Auto"
-                                                            Padding="0,14,0,14">
-                                                            <Grid.GestureRecognizers>
-                                                                <TapGestureRecognizer
-                                                                    Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.OpenLinkCommand}"
-                                                                    CommandParameter="{Binding Url}"/>
-                                                            </Grid.GestureRecognizers>
-                                                            <Image
-                                                                Grid.Column="0"
-                                                                Source="{AppThemeBinding Light=link.png, Dark=link_dark.png}"
-                                                                HeightRequest="16"
-                                                                WidthRequest="16"
-                                                                VerticalOptions="Center"
-                                                                Margin="0,0,10,0"/>
-                                                            <Label
-                                                                Grid.Column="1"
-                                                                Text="{Binding Label}"
-                                                                Style="{StaticResource LinkLabel}"
-                                                                VerticalOptions="Center"/>
-                                                            <Label
-                                                                Grid.Column="2"
-                                                                Text="→"
-                                                                FontFamily="OpenSansSemibold"
-                                                                FontSize="16"
-                                                                VerticalOptions="Center"
-                                                                TextColor="{AppThemeBinding
-                                                                    Light={StaticResource BrandMid},
-                                                                    Dark={StaticResource BrandLight}}"/>
-                                                        </Grid>
-                                                        <BoxView HeightRequest="1"/>
-                                                    </VerticalStackLayout>
-                                                </DataTemplate>
-                                            </BindableLayout.ItemTemplate>
-                                        </VerticalStackLayout>
-                                    </VerticalStackLayout>
-                                </Border>
-
-                            </VerticalStackLayout>
+                            <!-- Row 2, Col 0 — Organizer -->
+                            <Border
+                                Grid.Row="2" Grid.Column="0"
+                                Style="{StaticResource Card}"
+                                IsVisible="{Binding HasOrganizer}"
+                                VerticalOptions="Fill">
+                                <VerticalStackLayout Spacing="0">
+                                    <Label Text="ORGANIZER" Style="{StaticResource CardSectionLabel}"/>
+                                    <BoxView HeightRequest="1" Margin="0,0,0,14"/>
+                                    <Label
+                                        Text="{Binding Detail.Organizer.Name}"
+                                        FontFamily="OpenSansSemibold"
+                                        FontSize="15"
+                                        TextColor="{AppThemeBinding
+                                            Light={StaticResource TextPrimaryLight},
+                                            Dark={StaticResource TextPrimaryDark}}"/>
+                                    <Label
+                                        Text="{Binding Detail.Organizer.WebsiteUrl}"
+                                        IsVisible="{Binding OrganizerHasWebsite}"
+                                        FontSize="13"
+                                        Margin="0,6,0,0"
+                                        TextDecorations="Underline"
+                                        TextColor="{AppThemeBinding
+                                            Light={StaticResource BrandMid},
+                                            Dark={StaticResource BrandLight}}">
+                                        <Label.GestureRecognizers>
+                                            <TapGestureRecognizer
+                                                Command="{Binding OpenLinkCommand}"
+                                                CommandParameter="{Binding Detail.Organizer.WebsiteUrl}"/>
+                                        </Label.GestureRecognizers>
+                                    </Label>
+                                </VerticalStackLayout>
+                            </Border>
 
                         </Grid>
 

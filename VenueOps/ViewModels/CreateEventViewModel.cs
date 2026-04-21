@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using CommunityToolkit.Maui;
 using CommunityToolkit.Maui.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -13,7 +14,6 @@ public partial class CreateEventViewModel : BaseViewModel
     private readonly IPopupService _popupService;
 
     // ── Layout ────────────────────────────────────────────────────────────
-    // Set by CreateEventView based on popup width after sizing.
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsCompactLayout))]
@@ -21,7 +21,7 @@ public partial class CreateEventViewModel : BaseViewModel
 
     public bool IsCompactLayout => !IsWideLayout;
 
-    // ── Form fields ───────────────────────────────────────────────────────
+    // ── Core fields ───────────────────────────────────────────────────────
 
     [ObservableProperty]
     public partial string EventName { get; set; } = string.Empty;
@@ -31,6 +31,11 @@ public partial class CreateEventViewModel : BaseViewModel
 
     [ObservableProperty]
     public partial string Status { get; set; } = "Draft";
+
+    [ObservableProperty]
+    public partial string ExpectedAttendeesText { get; set; } = string.Empty;
+
+    // ── Dates ─────────────────────────────────────────────────────────────
 
     [ObservableProperty]
     public partial DateTime StartDate { get; set; } = DateTime.Today;
@@ -44,8 +49,27 @@ public partial class CreateEventViewModel : BaseViewModel
     [ObservableProperty]
     public partial TimeSpan EndTime { get; set; } = new TimeSpan(10, 0, 0);
 
+    // ── Optional fields ───────────────────────────────────────────────────
+
     [ObservableProperty]
-    public partial string AttendeeCountText { get; set; } = "0";
+    public partial string ShortDescription { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string LocationAddress { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string OrganizerName { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string OrganizerWebsite { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string TagsText { get; set; } = string.Empty;
+
+    // ── Dynamic collections ───────────────────────────────────────────────
+
+    public ObservableCollection<LinkItem> Links { get; } = [];
+    public ObservableCollection<ImageItem> Images { get; } = [];
 
     // ── Validation feedback ───────────────────────────────────────────────
 
@@ -66,7 +90,21 @@ public partial class CreateEventViewModel : BaseViewModel
         Title = "New Event";
     }
 
-    // ── Commands ──────────────────────────────────────────────────────────
+    // ── Commands — collections ────────────────────────────────────────────
+
+    [RelayCommand]
+    private void AddLink() => Links.Add(new LinkItem());
+
+    [RelayCommand]
+    private void RemoveLink(LinkItem item) => Links.Remove(item);
+
+    [RelayCommand]
+    private void AddImage() => Images.Add(new ImageItem());
+
+    [RelayCommand]
+    private void RemoveImage(ImageItem item) => Images.Remove(item);
+
+    // ── Commands — submit / cancel ────────────────────────────────────────
 
     [RelayCommand(CanExecute = nameof(CanSubmit))]
     private async Task SubmitAsync()
@@ -80,14 +118,43 @@ public partial class CreateEventViewModel : BaseViewModel
             var startLocal = StartDate.Date + StartTime;
             var endLocal   = EndDate.Date   + EndTime;
 
+            var tags = TagsText
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Where(t => !string.IsNullOrEmpty(t))
+                .ToList();
+
+            var links = Links
+                .Where(l => !string.IsNullOrWhiteSpace(l.Label) && !string.IsNullOrWhiteSpace(l.Url))
+                .Select(l => new EventLink { Label = l.Label.Trim(), Url = l.Url.Trim() })
+                .ToList();
+
+            var images = Images
+                .Where(i => !string.IsNullOrWhiteSpace(i.Url))
+                .Select(i => new EventImage { Url = i.Url.Trim(), AltText = i.AltText.Trim(), Credit = i.Credit.Trim() })
+                .ToList();
+
             var request = new CreateEventRequest
             {
-                EventName     = EventName.Trim(),
-                VenueName     = VenueName.Trim(),
-                Status        = Status.ToLowerInvariant(),
-                StartDateUtc  = startLocal.ToUniversalTime(),
-                EndDateUtc    = endLocal.ToUniversalTime(),
-                AttendeeCount = int.TryParse(AttendeeCountText, out var count) ? count : 0
+                EventName        = EventName.Trim(),
+                VenueName        = VenueName.Trim(),
+                Status           = Status.ToLowerInvariant(),
+                StartDateUtc     = startLocal.ToUniversalTime(),
+                EndDateUtc       = endLocal.ToUniversalTime(),
+                ExpectedAtendees = int.TryParse(ExpectedAttendeesText, out var count) ? count : 0,
+                ShortDescription = string.IsNullOrWhiteSpace(ShortDescription) ? null : ShortDescription.Trim(),
+                Location         = string.IsNullOrWhiteSpace(LocationAddress)
+                                       ? null
+                                       : new EventLocation { FormattedAddress = LocationAddress.Trim() },
+                Organizer        = string.IsNullOrWhiteSpace(OrganizerName)
+                                       ? null
+                                       : new EventOrganizer
+                                         {
+                                             Name       = OrganizerName.Trim(),
+                                             WebsiteUrl = string.IsNullOrWhiteSpace(OrganizerWebsite) ? null : OrganizerWebsite.Trim()
+                                         },
+                Tags   = tags.Count   > 0 ? tags   : null,
+                Links  = links.Count  > 0 ? links  : null,
+                Images = images.Count > 0 ? images : null,
             };
 
             var result = await _eventsService.CreateEventAsync(request);
@@ -143,11 +210,6 @@ public partial class CreateEventViewModel : BaseViewModel
             ErrorMessage = "Venue name is required.";
             return false;
         }
-        if (!int.TryParse(AttendeeCountText, out var count) || count < 0)
-        {
-            ErrorMessage = "Expected attendees must be a non-negative number.";
-            return false;
-        }
 
         var startLocal = StartDate.Date + StartTime;
         var endLocal   = EndDate.Date   + EndTime;
@@ -157,6 +219,36 @@ public partial class CreateEventViewModel : BaseViewModel
             return false;
         }
 
+        if (!string.IsNullOrEmpty(ExpectedAttendeesText)
+            && (!int.TryParse(ExpectedAttendeesText, out var count) || count < 0))
+        {
+            ErrorMessage = "Expected attendees must be a non-negative number.";
+            return false;
+        }
+
         return true;
     }
+}
+
+// ── Collection item types ─────────────────────────────────────────────────────
+
+public partial class LinkItem : ObservableObject
+{
+    [ObservableProperty]
+    public partial string Label { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string Url { get; set; } = string.Empty;
+}
+
+public partial class ImageItem : ObservableObject
+{
+    [ObservableProperty]
+    public partial string Url { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string AltText { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string Credit { get; set; } = string.Empty;
 }

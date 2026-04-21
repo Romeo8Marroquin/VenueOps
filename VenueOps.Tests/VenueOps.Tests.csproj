@@ -32,6 +32,7 @@
     <Compile Include="..\VenueOps\Models\Common\PagedResult.cs" />
     <Compile Include="..\VenueOps\Models\Events\CreateEventRequest.cs" />
     <Compile Include="..\VenueOps\Models\Events\CreateEventResponse.cs" />
+    <Compile Include="..\VenueOps\Models\Events\EventDetail.cs" />
     <Compile Include="..\VenueOps\Models\Events\RecentEvent.cs" />
     <Compile Include="..\VenueOps\Models\Dashboard\DashboardOverview.cs" />
     <Compile Include="..\VenueOps\Models\Dashboard\DashboardStats.cs" />

@@ -19,6 +19,24 @@ public sealed class CreateEventRequest
     [JsonPropertyName("endDateUtc")]
     public DateTime EndDateUtc { get; set; }
 
-    [JsonPropertyName("attendeeCount")]
-    public int AttendeeCount { get; set; }
+    [JsonPropertyName("expectedAtendees")]
+    public int ExpectedAtendees { get; set; }
+
+    [JsonPropertyName("shortDescription")]
+    public string? ShortDescription { get; set; }
+
+    [JsonPropertyName("location")]
+    public EventLocation? Location { get; set; }
+
+    [JsonPropertyName("organizer")]
+    public EventOrganizer? Organizer { get; set; }
+
+    [JsonPropertyName("tags")]
+    public List<string>? Tags { get; set; }
+
+    [JsonPropertyName("links")]
+    public List<EventLink>? Links { get; set; }
+
+    [JsonPropertyName("images")]
+    public List<EventImage>? Images { get; set; }
 }
