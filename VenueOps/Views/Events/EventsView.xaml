@@ -1,0 +1,490 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:vm="clr-namespace:VenueOps.ViewModels"
+    xmlns:models="clr-namespace:VenueOps.Models.Events"
+    xmlns:conv="clr-namespace:VenueOps.Converters"
+    x:Class="VenueOps.Views.Events.EventsView"
+    x:DataType="vm:EventsViewModel"
+    Title=""
+    Shell.NavBarIsVisible="False">
+
+    <ContentPage.Resources>
+
+        <!-- ── Converters ──────────────────────────────────────────────── -->
+        <conv:UtcToLocalConverter x:Key="UtcToLocal" Format="MMM d, h:mm tt"/>
+        <conv:EventStatusBackgroundConverter x:Key="EventStatusBackground"/>
+        <conv:EventStatusTextConverter      x:Key="EventStatusText"/>
+        <conv:EventStatusLabelConverter     x:Key="EventStatusLabel"/>
+
+        <!-- ── Typographic helpers ─────────────────────────────────────── -->
+        <Style x:Key="SectionTitle" TargetType="Label">
+            <Setter Property="FontFamily" Value="OpenSansSemibold"/>
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="TextColor"
+                    Value="{AppThemeBinding Light={StaticResource TextPrimaryLight},
+                                            Dark={StaticResource TextPrimaryDark}}"/>
+        </Style>
+
+        <Style x:Key="EventTitle" TargetType="Label">
+            <Setter Property="FontFamily" Value="OpenSansSemibold"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="TextColor"
+                    Value="{AppThemeBinding Light={StaticResource TextPrimaryLight},
+                                            Dark={StaticResource TextPrimaryDark}}"/>
+        </Style>
+
+        <Style x:Key="EventMeta" TargetType="Label">
+            <Setter Property="FontFamily" Value="OpenSansRegular"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="TextColor"
+                    Value="{AppThemeBinding Light={StaticResource TextSecondaryLight},
+                                            Dark={StaticResource TextSecondaryDark}}"/>
+        </Style>
+
+        <Style x:Key="TableHeader" TargetType="Label">
+            <Setter Property="FontFamily" Value="OpenSansSemibold"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="CharacterSpacing" Value="0.5"/>
+            <Setter Property="TextColor"
+                    Value="{AppThemeBinding Light={StaticResource TextSecondaryLight},
+                                            Dark={StaticResource TextSecondaryDark}}"/>
+        </Style>
+
+        <Style x:Key="PageNavButton" TargetType="Button">
+            <Setter Property="TextColor"
+                    Value="{AppThemeBinding Light={StaticResource BrandMid},
+                                            Dark={StaticResource BrandLight}}"/>
+            <Setter Property="BackgroundColor" Value="Transparent"/>
+            <Setter Property="BorderColor"
+                    Value="{AppThemeBinding Light={StaticResource BorderLight},
+                                            Dark={StaticResource BorderDark}}"/>
+            <Setter Property="BorderWidth" Value="1"/>
+            <Setter Property="FontFamily" Value="OpenSansSemibold"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="14,8"/>
+            <Setter Property="MinimumHeightRequest" Value="36"/>
+            <Setter Property="MinimumWidthRequest" Value="44"/>
+        </Style>
+
+        <!-- ── Sort direction toggle — compact ghost button ──────────────── -->
+        <Style x:Key="SortDirButton" TargetType="Button">
+            <Setter Property="TextColor"
+                    Value="{AppThemeBinding Light={StaticResource BrandMid},
+                                            Dark={StaticResource BrandLight}}"/>
+            <Setter Property="BackgroundColor" Value="Transparent"/>
+            <Setter Property="BorderColor"
+                    Value="{AppThemeBinding Light={StaticResource BorderLight},
+                                            Dark={StaticResource BorderDark}}"/>
+            <Setter Property="BorderWidth" Value="1"/>
+            <Setter Property="FontFamily" Value="OpenSansSemibold"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="10,0"/>
+            <Setter Property="HeightRequest" Value="36"/>
+            <Setter Property="MinimumHeightRequest" Value="0"/>
+            <Setter Property="MinimumWidthRequest" Value="36"/>
+        </Style>
+
+        <Style x:Key="NewEventButton" TargetType="Button">
+            <Setter Property="TextColor"
+                    Value="{AppThemeBinding Light={StaticResource SurfaceLight},
+                                            Dark={StaticResource TextPrimaryDark}}"/>
+            <Setter Property="BackgroundColor"
+                    Value="{AppThemeBinding Light={StaticResource BrandDark},
+                                            Dark={StaticResource BrandMid}}"/>
+            <Setter Property="FontFamily" Value="OpenSansSemibold"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="14,8"/>
+            <Setter Property="MinimumHeightRequest" Value="36"/>
+            <Setter Property="MinimumWidthRequest" Value="44"/>
+        </Style>
+
+    </ContentPage.Resources>
+
+    <Grid RowDefinitions="Auto,*">
+
+        <!-- ════════════════════════════════════════════════════════
+             FIXED PAGE HEADER (non-scrolling)
+             Left  — VenueOps | Event List branding
+             Right — + New Event button
+             ════════════════════════════════════════════════════════ -->
+        <Grid
+            Grid.Row="0"
+            ColumnDefinitions="*,Auto"
+            Padding="16,10,16,8"
+            BackgroundColor="{AppThemeBinding
+                Light={StaticResource BackgroundLight},
+                Dark={StaticResource BackgroundDark}}">
+
+            <HorizontalStackLayout Spacing="10" VerticalOptions="Center">
+                <Label
+                    Text="VenueOps"
+                    FontFamily="OpenSansSemibold"
+                    FontSize="20"
+                    VerticalOptions="Center"
+                    TextColor="{AppThemeBinding
+                        Light={StaticResource BrandDark},
+                        Dark={StaticResource BrandLight}}"/>
+                <BoxView
+                    WidthRequest="1.5"
+                    HeightRequest="18"
+                    CornerRadius="1"
+                    VerticalOptions="Center"
+                    BackgroundColor="{AppThemeBinding
+                        Light={StaticResource Gray300},
+                        Dark={StaticResource Gray600}}"/>
+                <Label
+                    Text="Event List"
+                    FontFamily="OpenSansRegular"
+                    FontSize="14"
+                    VerticalOptions="Center"
+                    Opacity="0.65"
+                    TextColor="{AppThemeBinding
+                        Light={StaticResource TextSecondaryLight},
+                        Dark={StaticResource TextSecondaryDark}}"/>
+            </HorizontalStackLayout>
+
+            <Button
+                Grid.Column="1"
+                MinimumWidthRequest="150"
+                Text="+ New Event"
+                Command="{Binding CreateEventCommand}"
+                Style="{StaticResource NewEventButton}"
+                VerticalOptions="Center"
+                AutomationId="CreateEventButton"/>
+
+        </Grid>
+
+        <!-- ════════════════════════════════════════════════════════
+             SCROLLABLE CONTENT
+             ════════════════════════════════════════════════════════ -->
+        <ScrollView Grid.Row="1">
+            <VerticalStackLayout Spacing="0" Padding="16,12,16,32">
+
+                <!-- ════════════════════════════════════════════════
+                     EVENTS CARD
+                     ════════════════════════════════════════════════ -->
+                <Border Style="{StaticResource Card}">
+                    <VerticalStackLayout Spacing="0">
+
+                        <!-- ── Header: title | search+filter | total+refresh ── -->
+                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="50" Margin="0,0,0,16">
+
+                            <Label
+                                Grid.Column="0"
+                                Text="Events"
+                                Style="{StaticResource SectionTitle}"
+                                VerticalOptions="Center"/>
+
+                            <!-- [search entry + icon] · [status] · [sort by] [↑↓] -->
+                            <!--
+                                ColumnSpacing="6" keeps entry and search icon tight (one group).
+                                Each subsequent control gets Margin="20,0,0,0" to open a clear
+                                visual gap between groups. The direction button sits 6dp from the
+                                sort picker (same tight pairing as entry+icon).
+                            -->
+                            <Grid Grid.Column="1" ColumnDefinitions="*,Auto,Auto,Auto,Auto" ColumnSpacing="15" VerticalOptions="Center">
+                                <Border Grid.Column="0" Padding="0" Style="{StaticResource InputBorder}">
+                                    <Entry
+                                        Placeholder="Search events..."
+                                        Text="{Binding EventsQuery}"
+                                        ReturnType="Search"
+                                        ReturnCommand="{Binding SearchEventsCommand}"
+                                        FontSize="13"/>
+                                </Border>
+                                <ImageButton
+                                    Grid.Column="1"
+                                    Source="{AppThemeBinding Light=search.png, Dark=search_dark.png}"
+                                    Command="{Binding SearchEventsCommand}"
+                                    HeightRequest="16"
+                                    WidthRequest="16"
+                                    MinimumHeightRequest="0"
+                                    MinimumWidthRequest="0"
+                                    BackgroundColor="Transparent"
+                                    BorderColor="Transparent"
+                                    BorderWidth="0"
+                                    Padding="0"
+                                    VerticalOptions="Center"
+                                    AutomationId="EventsSearchButton"/>
+                                <!-- Sort by — 20dp gap from status picker -->
+                                <Picker
+                                    Grid.Column="2"
+                                    ItemsSource="{Binding SortByFields}"
+                                    SelectedItem="{Binding SortByFilter}"
+                                    FontSize="13"
+                                    MinimumWidthRequest="120"
+                                    Margin="35,0,0,0"
+                                    VerticalOptions="Center"/>
+                                <!-- Sort direction toggle — tight to sort picker (6dp) -->
+                                <Button
+                                    Grid.Column="3"
+                                    Text="{Binding SortDirectionSymbol}"
+                                    Command="{Binding ToggleSortDirectionCommand}"
+                                    Style="{StaticResource SortDirButton}"
+                                    VerticalOptions="Center"
+                                    AutomationId="SortDirectionButton"/>
+                                <!-- Status filter — 20dp gap from search group -->
+                                <Picker
+                                    Grid.Column="4"
+                                    ItemsSource="{Binding StatusFilters}"
+                                    SelectedItem="{Binding EventsStatusFilter}"
+                                    FontSize="13"
+                                    MinimumWidthRequest="110"
+                                    Margin="35,0,0,0"
+                                    VerticalOptions="Center"/>
+                            </Grid>
+
+                            <!-- [total · refresh] -->
+                            <HorizontalStackLayout Grid.Column="2" Spacing="8" VerticalOptions="Center">
+                                <Label Style="{StaticResource Caption}" VerticalOptions="Center">
+                                    <Label.FormattedText>
+                                        <FormattedString>
+                                            <Span Text="{Binding Events.TotalItems, StringFormat='{0:N0}'}"/>
+                                            <Span Text=" total"/>
+                                        </FormattedString>
+                                    </Label.FormattedText>
+                                </Label>
+                                <ImageButton
+                                    Source="{AppThemeBinding Light=refresh.png, Dark=refresh_dark.png}"
+                                    Command="{Binding SearchEventsCommand}"
+                                    HeightRequest="16"
+                                    WidthRequest="16"
+                                    MinimumHeightRequest="0"
+                                    MinimumWidthRequest="0"
+                                    BackgroundColor="Transparent"
+                                    BorderColor="Transparent"
+                                    BorderWidth="0"
+                                    Padding="0"
+                                    VerticalOptions="Center"
+                                    AutomationId="RefreshButton"/>
+                            </HorizontalStackLayout>
+
+                        </Grid>
+
+                        <!-- Loading placeholder -->
+                        <Grid
+                            IsVisible="{Binding Events.IsLoading}"
+                            HeightRequest="320">
+                            <ActivityIndicator
+                                IsRunning="True"
+                                HorizontalOptions="Center"
+                                VerticalOptions="Center"/>
+                        </Grid>
+
+                        <!-- Content (shown when loaded) -->
+                        <VerticalStackLayout IsVisible="{Binding Events.IsNotLoading}" Spacing="0">
+
+                            <!-- ── COMPACT layout (phones / portrait tablets) ── -->
+                            <VerticalStackLayout
+                                IsVisible="{Binding IsCompactLayout}"
+                                Spacing="0"
+                                BindableLayout.ItemsSource="{Binding Events.Items}">
+
+                                <BindableLayout.ItemTemplate>
+                                    <DataTemplate x:DataType="models:RecentEvent">
+                                        <VerticalStackLayout Spacing="0">
+
+                                            <BoxView
+                                                HeightRequest="1"
+                                                Margin="0,6,0,0"
+                                                BackgroundColor="{AppThemeBinding
+                                                    Light={StaticResource BorderLight},
+                                                    Dark={StaticResource BorderDark}}"/>
+
+                                            <Grid
+                                                ColumnDefinitions="*,Auto"
+                                                RowDefinitions="Auto,Auto,Auto"
+                                                RowSpacing="3"
+                                                ColumnSpacing="8"
+                                                Padding="0,10,0,4">
+
+                                                <Label
+                                                    Grid.Row="0" Grid.Column="0"
+                                                    Text="{Binding EventName}"
+                                                    Style="{StaticResource EventTitle}"
+                                                    LineBreakMode="TailTruncation"/>
+
+                                                <Border
+                                                    Grid.Row="0" Grid.Column="1"
+                                                    StrokeShape="RoundRectangle 4"
+                                                    StrokeThickness="0"
+                                                    Padding="6,3"
+                                                    VerticalOptions="Center"
+                                                    BackgroundColor="{Binding Status, Converter={StaticResource EventStatusBackground}}">
+                                                    <Label
+                                                        Text="{Binding Status, Converter={StaticResource EventStatusLabel}}"
+                                                        FontFamily="OpenSansSemibold"
+                                                        FontSize="11"
+                                                        TextColor="{Binding Status, Converter={StaticResource EventStatusText}}"/>
+                                                </Border>
+
+                                                <Label
+                                                    Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
+                                                    Style="{StaticResource EventMeta}"
+                                                    LineBreakMode="TailTruncation">
+                                                    <Label.FormattedText>
+                                                        <FormattedString>
+                                                            <Span Text="{Binding VenueName}"/>
+                                                            <Span Text="  ·  "/>
+                                                            <Span Text="{Binding StartDateUtc,
+                                                                Converter={StaticResource UtcToLocal}}"/>
+                                                        </FormattedString>
+                                                    </Label.FormattedText>
+                                                </Label>
+
+                                                <Label
+                                                    Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2"
+                                                    Style="{StaticResource EventMeta}">
+                                                    <Label.FormattedText>
+                                                        <FormattedString>
+                                                            <Span Text="{Binding AttendeeCount, StringFormat='{0:N0}'}"/>
+                                                            <Span Text=" attendees  ·  "/>
+                                                            <Span Text="{Binding BookingReference}"/>
+                                                        </FormattedString>
+                                                    </Label.FormattedText>
+                                                </Label>
+
+                                            </Grid>
+                                        </VerticalStackLayout>
+                                    </DataTemplate>
+                                </BindableLayout.ItemTemplate>
+                            </VerticalStackLayout>
+
+                            <!-- ── WIDE layout (landscape tablets / desktop) ── -->
+                            <VerticalStackLayout IsVisible="{Binding IsWideLayout}" Spacing="0" Margin="0,10,0,0">
+
+                                <!-- Table header row -->
+                                <Grid
+                                    ColumnDefinitions="2*,*,*,*,*,90"
+                                    ColumnSpacing="12"
+                                    Padding="0,6,0,14">
+                                    <Label Grid.Column="0" Text="Event"       Style="{StaticResource TableHeader}"/>
+                                    <Label Grid.Column="1" Text="Venue"       Style="{StaticResource TableHeader}"/>
+                                    <Label Grid.Column="2" Text="Date"        Style="{StaticResource TableHeader}"/>
+                                    <Label Grid.Column="3" Text="Attendees"   Style="{StaticResource TableHeader}" HorizontalTextAlignment="Center"/>
+                                    <Label Grid.Column="4" Text="Booking Ref" Style="{StaticResource TableHeader}"/>
+                                    <Label Grid.Column="5" Text="Status"      Style="{StaticResource TableHeader}" HorizontalTextAlignment="Center"/>
+                                </Grid>
+
+                                <BoxView
+                                    HeightRequest="1"
+                                    BackgroundColor="{AppThemeBinding
+                                        Light={StaticResource BorderLight},
+                                        Dark={StaticResource BorderDark}}"/>
+
+                                <!-- Table data rows -->
+                                <VerticalStackLayout
+                                    Spacing="0"
+                                    BindableLayout.ItemsSource="{Binding Events.Items}">
+
+                                    <BindableLayout.ItemTemplate>
+                                        <DataTemplate x:DataType="models:RecentEvent">
+                                            <VerticalStackLayout Spacing="0">
+
+                                                <Grid
+                                                    ColumnDefinitions="2*,*,*,*,*,90"
+                                                    ColumnSpacing="12"
+                                                    Padding="0,10,0,10">
+
+                                                    <Label
+                                                        Grid.Column="0"
+                                                        Text="{Binding EventName}"
+                                                        Style="{StaticResource EventTitle}"
+                                                        LineBreakMode="TailTruncation"
+                                                        VerticalOptions="Center"/>
+
+                                                    <Label
+                                                        Grid.Column="1"
+                                                        Text="{Binding VenueName}"
+                                                        Style="{StaticResource EventMeta}"
+                                                        LineBreakMode="TailTruncation"
+                                                        VerticalOptions="Center"/>
+
+                                                    <Label
+                                                        Grid.Column="2"
+                                                        Text="{Binding StartDateUtc, Converter={StaticResource UtcToLocal}}"
+                                                        Style="{StaticResource EventMeta}"
+                                                        LineBreakMode="TailTruncation"
+                                                        VerticalOptions="Center"/>
+
+                                                    <Label
+                                                        Grid.Column="3"
+                                                        Text="{Binding AttendeeCount, StringFormat='{0:N0}'}"
+                                                        Style="{StaticResource EventMeta}"
+                                                        HorizontalTextAlignment="Center"
+                                                        HorizontalOptions="Center"
+                                                        VerticalOptions="Center"/>
+
+                                                    <Label
+                                                        Grid.Column="4"
+                                                        Text="{Binding BookingReference}"
+                                                        Style="{StaticResource EventMeta}"
+                                                        LineBreakMode="TailTruncation"
+                                                        VerticalOptions="Center"/>
+
+                                                    <Border
+                                                        Grid.Column="5"
+                                                        StrokeShape="RoundRectangle 4"
+                                                        StrokeThickness="0"
+                                                        Padding="6,3"
+                                                        HorizontalOptions="Center"
+                                                        VerticalOptions="Center"
+                                                        BackgroundColor="{Binding Status, Converter={StaticResource EventStatusBackground}}">
+                                                        <Label
+                                                            Text="{Binding Status, Converter={StaticResource EventStatusLabel}}"
+                                                            FontFamily="OpenSansSemibold"
+                                                            FontSize="11"
+                                                            HorizontalTextAlignment="Center"
+                                                            TextColor="{Binding Status, Converter={StaticResource EventStatusText}}"/>
+                                                    </Border>
+
+                                                </Grid>
+
+                                                <BoxView
+                                                    HeightRequest="1"
+                                                    BackgroundColor="{AppThemeBinding
+                                                        Light={StaticResource BorderLight},
+                                                        Dark={StaticResource BorderDark}}"/>
+
+                                            </VerticalStackLayout>
+                                        </DataTemplate>
+                                    </BindableLayout.ItemTemplate>
+                                </VerticalStackLayout>
+
+                            </VerticalStackLayout>
+
+                        </VerticalStackLayout>
+
+                        <!-- Pagination -->
+                        <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,14,0,0">
+                            <Button
+                                Grid.Column="0"
+                                Text="Prev"
+                                Command="{Binding Events.PreviousPageCommand}"
+                                Style="{StaticResource PageNavButton}"/>
+                            <Label
+                                Grid.Column="1"
+                                Text="{Binding Events.PageLabel}"
+                                Style="{StaticResource Caption}"
+                                HorizontalOptions="Center"
+                                VerticalOptions="Center"/>
+                            <Button
+                                Grid.Column="2"
+                                Text="Next"
+                                Command="{Binding Events.NextPageCommand}"
+                                Style="{StaticResource PageNavButton}"/>
+                        </Grid>
+
+                    </VerticalStackLayout>
+                </Border>
+
+            </VerticalStackLayout>
+        </ScrollView>
+
+    </Grid>
+
+</ContentPage>

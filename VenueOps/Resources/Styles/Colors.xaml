@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
+
+    <!--
+        VenueOps Brand Palette
+        ─────────────────────────────────────────────────────────────────
+        Brand greens  │ #285A48  BrandDark   deep forest green
+                      │ #408A71  BrandMid    medium green
+                      │ #B0E4CC  BrandLight  mint
+        ─────────────────────────────────────────────────────────────────
+        Light mode bg │ #F0F8F4  off-white (HSL 150°·18%·96%) — not
+                      │          pure white; faint green warmth
+        Dark mode bg  │ #091413  near-black with deep teal undertone
+        ─────────────────────────────────────────────────────────────────
+        Note: Android status bar colour → Platforms\Android\Resources\values\colors.xml
+    -->
+
+    <!-- ── Brand ────────────────────────────────────────── -->
+    <Color x:Key="BrandDark">#285A48</Color>
+    <Color x:Key="BrandMid">#408A71</Color>
+    <Color x:Key="BrandLight">#B0E4CC</Color>
+
+    <!-- ── Backgrounds ──────────────────────────────────── -->
+    <!-- Light: slightly lighter off-white — gradient top for auth pages -->
+    <Color x:Key="PageGradientStartLight">#E8F5EE</Color>
+    <!-- Light: off-white with barely-perceptible green warmth -->
+    <Color x:Key="BackgroundLight">#F0F8F4</Color>
+    <!-- Light: pure white for elevated cards / sheets -->
+    <Color x:Key="SurfaceLight">#FFFFFF</Color>
+    <!-- Dark: near-black teal -->
+    <Color x:Key="BackgroundDark">#091413</Color>
+    <!-- Dark: slightly elevated surface (cards, bottom sheets) -->
+    <Color x:Key="SurfaceDark">#0F1F1C</Color>
+    <!-- Dark: nested surface variant (e.g. input inside a card) -->
+    <Color x:Key="SurfaceVariantDark">#162922</Color>
+
+    <!-- ── Text ─────────────────────────────────────────── -->
+    <!-- Light: near-black with green undertone — softer than #000 -->
+    <Color x:Key="TextPrimaryLight">#0D1A16</Color>
+    <!-- Light: muted dark-green for labels, captions, placeholders -->
+    <Color x:Key="TextSecondaryLight">#3D5C50</Color>
+    <!-- Dark: off-white with faint green warmth -->
+    <Color x:Key="TextPrimaryDark">#E6F4EE</Color>
+    <!-- Dark: mint for secondary text, captions -->
+    <Color x:Key="TextSecondaryDark">#B0E4CC</Color>
+
+    <!-- ── Borders & Dividers ────────────────────────────── -->
+    <Color x:Key="BorderLight">#C8EDD9</Color>
+    <Color x:Key="BorderDark">#1E3D34</Color>
+
+    <!-- ── Input Fields ─────────────────────────────────── -->
+    <Color x:Key="InputBackgroundLight">#FFFFFF</Color>
+    <Color x:Key="InputBackgroundDark">#0F1F1C</Color>
+    <Color x:Key="PlaceholderLight">#7EA898</Color>
+    <Color x:Key="PlaceholderDark">#4A7A68</Color>
+
+    <!-- ── Flyout Navigation ─────────────────────────────── -->
+    <!-- Selected item glass pill — semi-transparent brand tint -->
+    <Color x:Key="FlyoutItemSelectedBgLight">#26285A48</Color>     <!-- BrandDark 15% -->
+    <Color x:Key="FlyoutItemSelectedBgDark">#1AB0E4CC</Color>      <!-- BrandLight 10% — subtle so icon stays visible -->
+    <Color x:Key="FlyoutItemSelectedStrokeLight">#40285A48</Color>  <!-- BrandDark 25% -->
+    <Color x:Key="FlyoutItemSelectedStrokeDark">#29B0E4CC</Color>   <!-- BrandLight 16% -->
+
+    <!-- ── Semantic ──────────────────────────────────────── -->
+    <Color x:Key="Error">#C0392B</Color>
+    <Color x:Key="ErrorDark">#EF5350</Color>
+    <Color x:Key="Success">#408A71</Color>
+    <Color x:Key="Warning">#F57C00</Color>
+
+    <!-- ── Neutral Grays (green-tinted, for disabled / utility) ── -->
+    <Color x:Key="Gray100">#E8F0EC</Color>
+    <Color x:Key="Gray200">#C8D8D0</Color>
+    <Color x:Key="Gray300">#A0B8AE</Color>
+    <Color x:Key="Gray400">#789890</Color>
+    <Color x:Key="Gray500">#507870</Color>
+    <Color x:Key="Gray600">#304840</Color>
+    <Color x:Key="Gray900">#162018</Color>
+    <Color x:Key="Gray950">#0A1410</Color>
+
+    <!-- ── Brushes ───────────────────────────────────────── -->
+    <SolidColorBrush x:Key="BrandDarkBrush"        Color="{StaticResource BrandDark}"/>
+    <SolidColorBrush x:Key="BrandMidBrush"         Color="{StaticResource BrandMid}"/>
+    <SolidColorBrush x:Key="BrandLightBrush"       Color="{StaticResource BrandLight}"/>
+    <SolidColorBrush x:Key="BackgroundLightBrush"  Color="{StaticResource BackgroundLight}"/>
+    <SolidColorBrush x:Key="BackgroundDarkBrush"   Color="{StaticResource BackgroundDark}"/>
+    <SolidColorBrush x:Key="SurfaceLightBrush"     Color="{StaticResource SurfaceLight}"/>
+    <SolidColorBrush x:Key="SurfaceDarkBrush"      Color="{StaticResource SurfaceDark}"/>
+
+</ResourceDictionary>

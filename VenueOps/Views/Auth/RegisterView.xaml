@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:vm="clr-namespace:VenueOps.ViewModels"
+    x:Class="VenueOps.Views.Auth.RegisterView"
+    x:DataType="vm:RegisterViewModel">
+
+    <ScrollView>
+        <Grid MinimumHeightRequest="600">
+
+            <!-- Full-screen background — same gradient as LoginView -->
+            <Grid.Background>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                    <GradientStop Color="{AppThemeBinding Light={StaticResource PageGradientStartLight}, Dark={StaticResource BackgroundDark}}" Offset="0"/>
+                    <GradientStop Color="{AppThemeBinding Light={StaticResource BackgroundLight}, Dark={StaticResource SurfaceDark}}" Offset="1"/>
+                </LinearGradientBrush>
+            </Grid.Background>
+
+            <!-- Width is driven by OnSizeAllocated in code-behind:
+                 WidthRequest = Min(pageWidth, 560) so it fills narrow screens
+                 and caps at 560dp on wide ones. -->
+            <VerticalStackLayout
+                x:Name="ContentLayout"
+                HorizontalOptions="Center"
+                Padding="24,60,24,40"
+                Spacing="0"
+                VerticalOptions="Center">
+
+                <!-- ── Branding ──────────────────────────────────── -->
+                <VerticalStackLayout Spacing="8" Margin="0,0,0,44">
+                    <Label
+                        Text="VenueOps"
+                        Style="{StaticResource DisplayTitle}"
+                        SemanticProperties.HeadingLevel="Level1"/>
+                    <Label
+                        Text="Every event. Every space. One platform."
+                        Style="{StaticResource BodySecondary}"
+                        HorizontalOptions="Center"
+                        HorizontalTextAlignment="Center"/>
+                </VerticalStackLayout>
+
+                <!-- ── Register Card ─────────────────────────────── -->
+                <Border Style="{StaticResource Card}" Padding="28,24">
+
+                    <VerticalStackLayout Spacing="0">
+
+                        <Label
+                            Text="Create account"
+                            Style="{StaticResource SubHeadline}"
+                            HorizontalOptions="Center"
+                            Margin="0,0,0,24"/>
+
+                        <!-- Name -->
+                        <VerticalStackLayout Spacing="6" Margin="0,0,0,16">
+                            <Label Text="Name" Style="{StaticResource FieldLabel}"/>
+                            <Border Style="{StaticResource InputBorder}">
+                                <Entry
+                                    Placeholder="Your full name"
+                                    Text="{Binding Name}"
+                                    ReturnType="Next"
+                                    AutomationId="NameEntry"/>
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <!-- Email -->
+                        <VerticalStackLayout Spacing="6" Margin="0,0,0,16">
+                            <Label Text="Email" Style="{StaticResource FieldLabel}"/>
+                            <Border Style="{StaticResource InputBorder}">
+                                <Entry
+                                    Placeholder="Enter your email"
+                                    Text="{Binding Email}"
+                                    Keyboard="Email"
+                                    ReturnType="Next"
+                                    IsSpellCheckEnabled="False"
+                                    IsTextPredictionEnabled="False"
+                                    AutomationId="EmailEntry"/>
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <!-- Password -->
+                        <VerticalStackLayout Spacing="6" Margin="0,0,0,16">
+                            <Label Text="Password" Style="{StaticResource FieldLabel}"/>
+                            <Border Style="{StaticResource InputBorder}">
+                                <Entry
+                                    Placeholder="Create a password"
+                                    Text="{Binding Password}"
+                                    IsPassword="True"
+                                    ReturnType="Next"
+                                    IsSpellCheckEnabled="False"
+                                    IsTextPredictionEnabled="False"
+                                    AutomationId="PasswordEntry"/>
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <!-- Confirm Password -->
+                        <VerticalStackLayout Spacing="6" Margin="0,0,0,24">
+                            <Label Text="Confirm password" Style="{StaticResource FieldLabel}"/>
+                            <Border Style="{StaticResource InputBorder}">
+                                <Entry
+                                    Placeholder="Repeat your password"
+                                    Text="{Binding PasswordConfirmation}"
+                                    IsPassword="True"
+                                    ReturnType="Done"
+                                    ReturnCommand="{Binding RegisterCommand}"
+                                    IsSpellCheckEnabled="False"
+                                    IsTextPredictionEnabled="False"
+                                    AutomationId="PasswordConfirmationEntry"/>
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <!-- Error message -->
+                        <Label
+                            Text="{Binding ErrorMessage}"
+                            Style="{StaticResource ErrorText}"
+                            IsVisible="{Binding HasError}"
+                            Margin="0,0,0,24"
+                            AutomationId="ErrorLabel"/>
+
+                        <!-- Sign Up button -->
+                        <Button
+                            Text="Sign Up"
+                            Command="{Binding RegisterCommand}"
+                            IsEnabled="{Binding IsNotBusy}"
+                            HeightRequest="52"
+                            AutomationId="RegisterButton"/>
+
+                        <!-- Activity indicator -->
+                        <ActivityIndicator
+                            IsRunning="{Binding IsBusy}"
+                            IsVisible="{Binding IsBusy}"
+                            HorizontalOptions="Center"
+                            Margin="0,20,0,0"/>
+
+                        <!-- Navigation link -->
+                        <HorizontalStackLayout
+                            HorizontalOptions="Center"
+                            Spacing="4"
+                            Margin="0,20,0,4">
+                            <Label
+                                Text="Already have an account? "
+                                FontFamily="OpenSansRegular"
+                                FontSize="13"
+                                VerticalOptions="Center"
+                                TextColor="{AppThemeBinding
+                                    Light={StaticResource TextSecondaryLight},
+                                    Dark={StaticResource TextSecondaryDark}}"/>
+                            <Label
+                                Text="Sign in"
+                                FontFamily="OpenSansSemibold"
+                                FontSize="13"
+                                TextDecorations="Underline"
+                                VerticalOptions="Center"
+                                TextColor="{AppThemeBinding
+                                    Light={StaticResource BrandMid},
+                                    Dark={StaticResource BrandLight}}">
+                                <Label.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding NavigateToLoginCommand}"/>
+                                </Label.GestureRecognizers>
+                            </Label>
+                        </HorizontalStackLayout>
+
+                    </VerticalStackLayout>
+                </Border>
+
+            </VerticalStackLayout>
+        </Grid>
+    </ScrollView>
+
+</ContentPage>

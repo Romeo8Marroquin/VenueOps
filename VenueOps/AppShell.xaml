@@ -1,0 +1,252 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Shell
+    x:Class="VenueOps.AppShell"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:dashboard="clr-namespace:VenueOps.Views.Dashboard"
+    xmlns:events="clr-namespace:VenueOps.Views.Events"
+    xmlns:viewmodels="clr-namespace:VenueOps.ViewModels"
+    FlyoutBackgroundColor="{AppThemeBinding Light={StaticResource SurfaceLight}, Dark={StaticResource SurfaceDark}}"
+    FlyoutHeaderBehavior="Fixed"
+    FlyoutWidth="210"
+    Title="VenueOps"
+    x:DataType="viewmodels:AppShellViewModel">
+
+    <!-- ── Flyout Header ──────────────────────────────────── -->
+    <Shell.FlyoutHeader>
+        <Grid
+            HeightRequest="90"
+            BackgroundColor="Transparent">
+            <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="2">
+                <Label
+                    Text="VenueOps"
+                    FontFamily="OpenSansSemibold"
+                    FontSize="22"
+                    HorizontalTextAlignment="Center"
+                    TextColor="{AppThemeBinding
+                        Light={StaticResource BrandDark},
+                        Dark={StaticResource BrandLight}}"/>
+                <Label
+                    Text="Every Event. Every Space."
+                    FontFamily="OpenSansRegular"
+                    FontSize="11"
+                    HorizontalTextAlignment="Center"
+                    TextColor="{AppThemeBinding
+                        Light={StaticResource TextSecondaryLight},
+                        Dark={StaticResource BrandLight}}"
+                    Opacity="0.75"/>
+                <Label
+                    Text="One Platform."
+                    FontFamily="OpenSansRegular"
+                    FontSize="11"
+                    HorizontalTextAlignment="Center"
+                    TextColor="{AppThemeBinding
+                        Light={StaticResource TextSecondaryLight},
+                        Dark={StaticResource BrandLight}}"
+                    Opacity="0.55"/>
+            </VerticalStackLayout>
+        </Grid>
+    </Shell.FlyoutHeader>
+
+    <!-- ── Flyout Item Template ──────────────────────────────
+         Each item is a rounded pill with a glass-style selection
+         highlight. The VSM "Selected" state applies the brand tint.
+         Margin="12,3" creates the uniform 12dp side padding and 3dp
+         gap between items that aligns with header/footer spacing.     -->
+    <Shell.ItemTemplate>
+        <DataTemplate x:DataType="BaseShellItem">
+            <Grid WidthRequest="186" Padding="0,3" HorizontalOptions="Fill">
+                <Border
+                    HorizontalOptions="Fill"
+                    Margin="12,0"
+                    MinimumHeightRequest="50"
+                    Padding="14,10"
+                    BackgroundColor="Transparent"
+                    Stroke="Transparent"
+                    StrokeThickness="1"
+                    StrokeShape="RoundRectangle 12">
+
+                    <Grid
+                        ColumnDefinitions="26,*"
+                        ColumnSpacing="12"
+                        HorizontalOptions="Fill"
+                        VerticalOptions="Center">
+
+                        <Image
+                            Grid.Column="0"
+                            Source="{Binding FlyoutIcon}"
+                            WidthRequest="22"
+                            HeightRequest="22"
+                            Aspect="AspectFit"
+                            HorizontalOptions="Center"
+                            VerticalOptions="Center" />
+
+                        <Label
+                            Grid.Column="1"
+                            Text="{Binding Title}"
+                            FontFamily="OpenSansRegular"
+                            FontSize="14"
+                            LineBreakMode="TailTruncation"
+                            HorizontalOptions="Fill"
+                            VerticalTextAlignment="Center"
+                            TextColor="{AppThemeBinding
+                                Light={StaticResource TextPrimaryLight},
+                                Dark={StaticResource TextPrimaryDark}}" />
+                    </Grid>
+
+                    <Border.Triggers>
+                        <DataTrigger
+                            TargetType="Border"
+                            Binding="{Binding IsChecked}"
+                            Value="True">
+                            <Setter
+                                Property="BackgroundColor"
+                                Value="{AppThemeBinding
+                                    Light={StaticResource FlyoutItemSelectedBgLight},
+                                    Dark={StaticResource FlyoutItemSelectedBgDark}}" />
+                            <Setter
+                                Property="Stroke"
+                                Value="{AppThemeBinding
+                                    Light={StaticResource FlyoutItemSelectedStrokeLight},
+                                    Dark={StaticResource FlyoutItemSelectedStrokeDark}}" />
+                        </DataTrigger>
+                    </Border.Triggers>
+                </Border>
+            </Grid>
+        </DataTemplate>
+    </Shell.ItemTemplate>
+
+    <!-- ── Navigation Items ───────────────────────────────── -->
+
+    <!--
+        Dashboard is the only active page for this POC.
+        Future items: Venues, Rooms, Bookings, Staff, Devices —
+        uncomment and add the relevant xmlns + View class when ready.
+    -->
+    <!--
+        Icon uses AppThemeBinding so the correct pre-compiled density is
+        served per theme (BrandDark on light, BrandLight/mint on dark).
+        The DataTemplate picks it up via {Binding Icon}.
+        When adding more sections, follow the same Icon= pattern here.
+    -->
+    <FlyoutItem
+        Title="Dashboard"
+        Route="dashboard"
+        Icon="{AppThemeBinding Light=home.png, Dark=home_dark.png}">
+        <ShellContent
+            Route="dashboard"
+            ContentTemplate="{DataTemplate dashboard:DashboardView}"/>
+    </FlyoutItem>
+
+    <FlyoutItem
+        Title="Events"
+        Route="events"
+        Icon="{AppThemeBinding Light=calendar.png, Dark=calendar_dark.png}">
+        <ShellContent
+            Route="events"
+            ContentTemplate="{DataTemplate events:EventsView}"/>
+    </FlyoutItem>
+
+    <!--
+    <FlyoutItem Title="Venues">
+        <FlyoutItem.Icon><FileImageSource File="venues.svg"/></FlyoutItem.Icon>
+        <ShellContent ContentTemplate="{DataTemplate venues:VenuesView}"/>
+    </FlyoutItem>
+
+    <FlyoutItem Title="Rooms">
+        <FlyoutItem.Icon><FileImageSource File="rooms.svg"/></FlyoutItem.Icon>
+        <ShellContent ContentTemplate="{DataTemplate rooms:RoomsView}"/>
+    </FlyoutItem>
+
+    <FlyoutItem Title="Bookings">
+        <FlyoutItem.Icon><FileImageSource File="bookings.svg"/></FlyoutItem.Icon>
+        <ShellContent ContentTemplate="{DataTemplate bookings:BookingsView}"/>
+    </FlyoutItem>
+
+    <FlyoutItem Title="Staff">
+        <FlyoutItem.Icon><FileImageSource File="staff.svg"/></FlyoutItem.Icon>
+        <ShellContent ContentTemplate="{DataTemplate staff:StaffView}"/>
+    </FlyoutItem>
+
+    <FlyoutItem Title="Devices">
+        <FlyoutItem.Icon><FileImageSource File="devices.svg"/></FlyoutItem.Icon>
+        <ShellContent ContentTemplate="{DataTemplate devices:DevicesView}"/>
+    </FlyoutItem>
+    -->
+
+    <!-- ── Flyout Footer ──────────────────────────────────────
+         Bound to AppShellViewModel (Shell.BindingContext).
+         Shows the signed-in user's avatar, display name, short
+         email (local part before @), and a Sign Out button.
+         The button matches the item pill's corner radius (10) and
+         uses the OutlineButton style for visual contrast.           -->
+    <Shell.FlyoutFooter>
+        <VerticalStackLayout
+            Padding="15,0,15,15"
+            Spacing="0"
+            BackgroundColor="{AppThemeBinding
+                Light={StaticResource SurfaceLight},
+                Dark={StaticResource SurfaceDark}}">
+
+            <!-- Separator -->
+            <BoxView
+                HeightRequest="1"
+                Margin="0,0,0,15"
+                Opacity="0.4"/>
+
+            <!-- User info row -->
+            <HorizontalStackLayout Spacing="15" Margin="0,0,0,15">
+    
+                <!-- Avatar — user initial on a branded circle -->
+                <Border
+                    WidthRequest="40"
+                    HeightRequest="40"
+                    StrokeShape="RoundRectangle 20"
+                    StrokeThickness="0"
+                    BackgroundColor="{StaticResource BrandDark}"
+                    VerticalOptions="Center">
+                    <Label
+                        Text="{Binding UserInitial}"
+                        FontFamily="OpenSansSemibold"
+                        FontSize="17"
+                        TextColor="White"
+                        HorizontalOptions="Center"
+                        VerticalOptions="Center"
+                        HorizontalTextAlignment="Center"/>
+                </Border>
+
+                <!-- Name + abbreviated email -->
+                <VerticalStackLayout Spacing="2" VerticalOptions="Center">
+                    <Label
+                        Text="{Binding UserName}"
+                        FontFamily="OpenSansSemibold"
+                        FontSize="13"
+                        LineBreakMode="TailTruncation"
+                        TextColor="{AppThemeBinding
+                            Light={StaticResource TextPrimaryLight},
+                            Dark={StaticResource TextPrimaryDark}}"/>
+                    <Label
+                        Text="{Binding ShortEmail}"
+                        FontFamily="OpenSansRegular"
+                        FontSize="11"
+                        LineBreakMode="TailTruncation"
+                        Opacity="0.65"
+                        TextColor="{AppThemeBinding
+                            Light={StaticResource TextSecondaryLight},
+                            Dark={StaticResource TextSecondaryDark}}"/>
+                </VerticalStackLayout>
+            </HorizontalStackLayout>
+
+            <!-- Sign Out — same pill shape as nav items, outline style -->
+            <Button
+                Text="Sign Out"
+                Command="{Binding SignOutCommand}"
+                IsEnabled="{Binding IsNotBusy}"
+                Style="{StaticResource OutlineButton}"
+                HeightRequest="50"
+                AutomationId="FlyoutSignOutButton"/>
+
+        </VerticalStackLayout>
+    </Shell.FlyoutFooter>
+
+</Shell>
