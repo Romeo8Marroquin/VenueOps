@@ -5,7 +5,7 @@ namespace VenueOps.ViewModels;
 
 /// <summary>
 /// ViewModel for the AppShell flyout footer.
-/// Singleton — lives for the entire authenticated session.
+/// Registered as Singleton in MauiProgram.cs — tied to the AppShell singleton.
 /// </summary>
 public partial class AppShellViewModel : BaseViewModel
 {
