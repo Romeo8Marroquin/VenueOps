@@ -1,0 +1,56 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <LangVersion>14.0</LangVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+    <PackageReference Include="coverlet.collector" Version="6.0.4" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="Moq" Version="4.20.70" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <!-- Link source files that compile on plain net10.0 (no MAUI types) -->
+  <ItemGroup>
+    <!-- Models -->
+    <Compile Include="..\VenueOps\Models\LoginRequest.cs" />
+    <Compile Include="..\VenueOps\Models\LoginResponse.cs" />
+    <Compile Include="..\VenueOps\Models\RegisterRequest.cs" />
+    <Compile Include="..\VenueOps\Models\RegisterResponse.cs" />
+    <Compile Include="..\VenueOps\Models\UserInfo.cs" />
+    <Compile Include="..\VenueOps\Models\Common\PagedResult.cs" />
+    <Compile Include="..\VenueOps\Models\Events\CreateEventRequest.cs" />
+    <Compile Include="..\VenueOps\Models\Events\CreateEventResponse.cs" />
+    <Compile Include="..\VenueOps\Models\Events\RecentEvent.cs" />
+    <Compile Include="..\VenueOps\Models\Dashboard\DashboardOverview.cs" />
+    <Compile Include="..\VenueOps\Models\Dashboard\DashboardStats.cs" />
+    <Compile Include="..\VenueOps\Models\Dashboard\InsightInfo.cs" />
+    <!-- Service interfaces and exception (no MAUI dependencies) -->
+    <Compile Include="..\VenueOps\Services\AuthException.cs" />
+    <Compile Include="..\VenueOps\Services\IAuthService.cs" />
+    <Compile Include="..\VenueOps\Services\IDashboardService.cs" />
+    <Compile Include="..\VenueOps\Services\IDialogService.cs" />
+    <Compile Include="..\VenueOps\Services\IEventsService.cs" />
+    <Compile Include="..\VenueOps\Services\INavigationService.cs" />
+    <Compile Include="..\VenueOps\Services\ISessionService.cs" />
+    <Compile Include="..\VenueOps\Services\SessionService.cs" />
+    <!-- ViewModels (CommunityToolkit.Mvvm only — no MAUI types) -->
+    <Compile Include="..\VenueOps\ViewModels\BaseViewModel.cs" />
+    <Compile Include="..\VenueOps\ViewModels\AppShellViewModel.cs" />
+    <Compile Include="..\VenueOps\ViewModels\LoginViewModel.cs" />
+    <Compile Include="..\VenueOps\ViewModels\RegisterViewModel.cs" />
+    <Compile Include="..\VenueOps\ViewModels\Common\PaginatedSection.cs" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="VenueOps\VenueOps.csproj" />
+  <Project Path="VenueOps.Tests\VenueOps.Tests.csproj" />
+</Solution>
