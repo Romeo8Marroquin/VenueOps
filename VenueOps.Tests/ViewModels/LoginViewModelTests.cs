@@ -12,19 +12,31 @@ public class LoginViewModelTests
     private readonly Mock<INavigationService> _navMock = new();
     private readonly Mock<ISessionService> _sessionMock = new();
 
+    public static TheoryData<string, string> EmptyCredentialCases =
+        new()
+        {
+            { string.Empty, CreateOpaqueValue() },
+            { "   ", CreateOpaqueValue() },
+            { CreateEmail(), string.Empty },
+            { CreateEmail(), "   " }
+        };
+
     private LoginViewModel CreateSut() => new(_authMock.Object, _navMock.Object, _sessionMock.Object);
+
+    private static string CreateEmail() => "user@example.test";
+
+    private static string CreateOpaqueValue() => new('x', 12);
+
+    private static string CreateSessionToken() => new('t', 16);
 
     // ── Validation ────────────────────────────────────────────────────────────
 
     [Theory]
-    [InlineData("", "anypassword")]
-    [InlineData("   ", "anypassword")]
-    [InlineData("user@fake.dev", "")]
-    [InlineData("user@fake.dev", "   ")]
+    [MemberData(nameof(EmptyCredentialCases))]
     public async Task LoginCommand_SetsValidationError_WhenEmailOrPasswordIsEmpty(string email, string password)
     {
         LoginViewModel sut = CreateSut();
-        sut.Email    = email;
+        sut.Email = email;
         sut.Password = password;
 
         await sut.LoginCommand.ExecuteAsync(null);
@@ -39,8 +51,8 @@ public class LoginViewModelTests
     [Fact]
     public async Task LoginCommand_StoresUserClearsPasswordAndNavigates_OnSuccess()
     {
-        UserInfo fakeUser = new() { Uuid = "fake-uuid-001", Name = "Test User", Email = "test@fake.dev" };
-        LoginResponse fakeResponse = new() { Success = true, Token = "fake-token-xyz", User = fakeUser };
+        UserInfo fakeUser = new() { Uuid = "fake-uuid-001", Name = "Test User", Email = CreateEmail() };
+        LoginResponse fakeResponse = new() { Success = true, Token = CreateSessionToken(), User = fakeUser };
 
         _authMock
             .Setup(a => a.LoginAsync(It.IsAny<LoginRequest>(), It.IsAny<CancellationToken>()))
@@ -48,8 +60,8 @@ public class LoginViewModelTests
         _navMock.Setup(n => n.NavigateToMainAsync()).Returns(Task.CompletedTask);
 
         LoginViewModel sut = CreateSut();
-        sut.Email    = "test@fake.dev";
-        sut.Password = "S3cr3tPass!";
+        sut.Email = CreateEmail();
+        sut.Password = CreateOpaqueValue();
 
         await sut.LoginCommand.ExecuteAsync(null);
 
@@ -63,11 +75,11 @@ public class LoginViewModelTests
     // ── AuthException error mapping ───────────────────────────────────────────
 
     [Theory]
-    [InlineData(HttpStatusCode.Unauthorized,        "Invalid email or password.")]
-    [InlineData(HttpStatusCode.Forbidden,           "Access denied.")]
+    [InlineData(HttpStatusCode.Unauthorized, "Invalid email or password.")]
+    [InlineData(HttpStatusCode.Forbidden, "Access denied.")]
     [InlineData(HttpStatusCode.InternalServerError, "Server error. Please try again later.")]
-    [InlineData(HttpStatusCode.ServiceUnavailable,  "Server error. Please try again later.")]
-    [InlineData(HttpStatusCode.BadRequest,          "Sign-in failed. Please try again.")]
+    [InlineData(HttpStatusCode.ServiceUnavailable, "Server error. Please try again later.")]
+    [InlineData(HttpStatusCode.BadRequest, "Sign-in failed. Please try again.")]
     public async Task LoginCommand_MapsAuthExceptionStatusToMessage(HttpStatusCode code, string expectedMessage)
     {
         _authMock
@@ -75,8 +87,8 @@ public class LoginViewModelTests
             .ThrowsAsync(new AuthException(code));
 
         LoginViewModel sut = CreateSut();
-        sut.Email    = "user@fake.dev";
-        sut.Password = "AnyPass1!";
+        sut.Email = CreateEmail();
+        sut.Password = CreateOpaqueValue();
 
         await sut.LoginCommand.ExecuteAsync(null);
 
@@ -93,8 +105,8 @@ public class LoginViewModelTests
             .ThrowsAsync(new AuthException(null));
 
         LoginViewModel sut = CreateSut();
-        sut.Email    = "user@fake.dev";
-        sut.Password = "AnyPass1!";
+        sut.Email = CreateEmail();
+        sut.Password = CreateOpaqueValue();
 
         await sut.LoginCommand.ExecuteAsync(null);
 
@@ -111,8 +123,8 @@ public class LoginViewModelTests
             .ThrowsAsync(new HttpRequestException("network down"));
 
         LoginViewModel sut = CreateSut();
-        sut.Email    = "user@fake.dev";
-        sut.Password = "AnyPass1!";
+        sut.Email = CreateEmail();
+        sut.Password = CreateOpaqueValue();
 
         await sut.LoginCommand.ExecuteAsync(null);
 
@@ -128,8 +140,8 @@ public class LoginViewModelTests
             .ThrowsAsync(new InvalidOperationException("unexpected"));
 
         LoginViewModel sut = CreateSut();
-        sut.Email    = "user@fake.dev";
-        sut.Password = "AnyPass1!";
+        sut.Email = CreateEmail();
+        sut.Password = CreateOpaqueValue();
 
         await sut.LoginCommand.ExecuteAsync(null);
 
