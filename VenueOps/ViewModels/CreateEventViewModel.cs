@@ -30,7 +30,7 @@ public partial class CreateEventViewModel : BaseViewModel
     public partial string VenueName { get; set; } = string.Empty;
 
     [ObservableProperty]
-    public partial string Status { get; set; } = "draft";
+    public partial string Status { get; set; } = "Draft";
 
     [ObservableProperty]
     public partial DateTime StartDate { get; set; } = DateTime.Today;
@@ -57,7 +57,7 @@ public partial class CreateEventViewModel : BaseViewModel
 
     // ── Options ───────────────────────────────────────────────────────────
 
-    public IReadOnlyList<string> StatusOptions { get; } = ["draft", "confirmed", "cancelled"];
+    public IReadOnlyList<string> StatusOptions { get; } = ["Draft", "Confirmed", "Cancelled"];
 
     public CreateEventViewModel(IEventsService eventsService, IPopupService popupService)
     {
@@ -84,21 +84,22 @@ public partial class CreateEventViewModel : BaseViewModel
             {
                 EventName     = EventName.Trim(),
                 VenueName     = VenueName.Trim(),
-                Status        = Status,
+                Status        = Status.ToLowerInvariant(),
                 StartDateUtc  = startLocal.ToUniversalTime(),
                 EndDateUtc    = endLocal.ToUniversalTime(),
                 AttendeeCount = int.TryParse(AttendeeCountText, out var count) ? count : 0
             };
 
             var result = await _eventsService.CreateEventAsync(request);
+
+            IsBusy = false;
+
             if (result is null)
             {
                 ErrorMessage = "Something went wrong. Please try again.";
                 return;
             }
 
-            // Show success alert. Calling DisplayAlertAsync on the host window page
-            // renders a native dialog above the popup on all platforms.
             var hostPage = Application.Current?.Windows[0].Page;
             if (hostPage is not null)
             {
@@ -112,11 +113,8 @@ public partial class CreateEventViewModel : BaseViewModel
         }
         catch (Exception)
         {
-            ErrorMessage = "Something went wrong. Please try again.";
-        }
-        finally
-        {
             IsBusy = false;
+            ErrorMessage = "Something went wrong. Please try again.";
         }
     }
 

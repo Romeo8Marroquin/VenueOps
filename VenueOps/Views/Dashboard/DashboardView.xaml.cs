@@ -13,9 +13,13 @@ public partial class DashboardView : ContentPage
         _viewModel = viewModel;
     }
 
+    private bool _loaded;
+
     protected override void OnAppearing()
     {
         base.OnAppearing();
+        if (_loaded) return;
+        _loaded = true;
         _ = _viewModel.InitializeAsync();
     }
 

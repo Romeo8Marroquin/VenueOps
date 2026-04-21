@@ -14,5 +14,6 @@ public partial class AppShell : Shell
         // switching Window[0].Page via INavigationService, not GoToAsync.
         Routing.RegisterRoute("dashboard", typeof(Views.Dashboard.DashboardView));
         Routing.RegisterRoute("events", typeof(Views.Events.EventsView));
+        Routing.RegisterRoute("eventDetail", typeof(Views.Events.EventDetailView));
     }
 }

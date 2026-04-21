@@ -62,4 +62,12 @@ public sealed class NavigationService(IServiceProvider serviceProvider) : INavig
         if (!result.WasDismissedByTappingOutsideOfPopup && result.Result is true)
             await onCreated();
     }
+
+    public Task GoToEventDetailAsync(string eventId)
+    {
+        var encoded = Uri.EscapeDataString(eventId);
+        return Shell.Current.GoToAsync($"eventDetail?id={encoded}");
+    }
+
+    public Task GoBackAsync() => Shell.Current.GoToAsync("..");
 }

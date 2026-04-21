@@ -17,4 +17,10 @@ public interface INavigationService
     /// is fully dismissed so the caller can refresh its data without race conditions.
     /// </summary>
     Task PushCreateEventModalAsync(Func<Task> onCreated);
+
+    /// <summary>Navigates to the EventDetailView for the given event ID.</summary>
+    Task GoToEventDetailAsync(string eventId);
+
+    /// <summary>Pops the current Shell page (go back).</summary>
+    Task GoBackAsync();
 }

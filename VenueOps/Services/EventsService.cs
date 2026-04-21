@@ -30,4 +30,14 @@ public sealed class EventsService(IHttpClientFactory factory) : IEventsService
         if (!response.IsSuccessStatusCode) return null;
         return await response.Content.ReadFromJsonAsync<CreateEventResponse>(ct);
     }
+
+    public async Task<EventDetail?> GetEventDetailAsync(
+        string eventId,
+        CancellationToken ct = default)
+    {
+        var encoded = Uri.EscapeDataString(eventId);
+        var response = await _http.GetAsync($"events/detail?id={encoded}", ct);
+        if (!response.IsSuccessStatusCode) return null;
+        return await response.Content.ReadFromJsonAsync<EventDetail>(ct);
+    }
 }

@@ -49,6 +49,7 @@ public static class MauiProgram
         builder.Services.AddTransient<DashboardViewModel>();
         builder.Services.AddTransient<EventsViewModel>();
         builder.Services.AddTransient<CreateEventViewModel>();
+        builder.Services.AddTransient<EventDetailViewModel>();
 
         // ── Views (Transient) ─────────────────────────────────────────────────
         builder.Services.AddTransient<LoginView>();
@@ -56,6 +57,7 @@ public static class MauiProgram
         builder.Services.AddTransient<DashboardView>();
         builder.Services.AddTransient<EventsView>();
         builder.Services.AddTransient<CreateEventView>();
+        builder.Services.AddTransient<EventDetailView>();
 
         return builder.Build();
     }
