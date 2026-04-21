@@ -1,3 +1,4 @@
+using System.Net;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using VenueOps.Models;
@@ -58,16 +59,19 @@ public partial class LoginViewModel : BaseViewModel
             var request = new LoginRequest { Email = Email, Password = Password };
             var response = await _authService.LoginAsync(request);
 
-            if (response is not null)
+            _sessionService.CurrentUser = response.User; // store for flyout footer
+            Password = string.Empty;                     // clear sensitive field
+            await _navigationService.NavigateToMainAsync();
+        }
+        catch (AuthException ex)
+        {
+            ErrorMessage = ex.StatusCode switch
             {
-                _sessionService.CurrentUser = response.User; // store for flyout footer
-                Password = string.Empty;                     // clear sensitive field
-                await _navigationService.NavigateToMainAsync();
-            }
-            else
-            {
-                ErrorMessage = "Invalid credentials. Please try again.";
-            }
+                HttpStatusCode.Unauthorized          => "Invalid email or password.",
+                HttpStatusCode.Forbidden             => "Access denied.",
+                >= HttpStatusCode.InternalServerError => "Server error. Please try again later.",
+                _                                    => "Sign-in failed. Please try again."
+            };
         }
         catch (HttpRequestException)
         {

@@ -14,7 +14,9 @@
 
         <!-- ── Converters ──────────────────────────────────────────────── -->
         <conv:UtcToLocalConverter x:Key="UtcToLocal" Format="MMM d, h:mm tt"/>
-        <conv:EventStatusConverter x:Key="EventStatus"/>
+        <conv:EventStatusBackgroundConverter x:Key="EventStatusBackground"/>
+        <conv:EventStatusTextConverter      x:Key="EventStatusText"/>
+        <conv:EventStatusLabelConverter     x:Key="EventStatusLabel"/>
 
         <!-- ── Insight card — subtle tinted surface ────────────────────── -->
         <Style x:Key="InsightCard" TargetType="Border">
@@ -493,18 +495,12 @@
                                                     StrokeThickness="0"
                                                     Padding="6,3"
                                                     VerticalOptions="Center"
-                                                    BackgroundColor="{Binding Status,
-                                                        Converter={StaticResource EventStatus},
-                                                        ConverterParameter=background}">
+                                                    BackgroundColor="{Binding Status, Converter={StaticResource EventStatusBackground}}">
                                                     <Label
-                                                        Text="{Binding Status,
-                                                            Converter={StaticResource EventStatus},
-                                                            ConverterParameter=label}"
+                                                        Text="{Binding Status, Converter={StaticResource EventStatusLabel}}"
                                                         FontFamily="OpenSansSemibold"
                                                         FontSize="11"
-                                                        TextColor="{Binding Status,
-                                                            Converter={StaticResource EventStatus},
-                                                            ConverterParameter=text}"/>
+                                                        TextColor="{Binding Status, Converter={StaticResource EventStatusText}}"/>
                                                 </Border>
 
                                                 <Label
@@ -619,19 +615,13 @@
                                                         Padding="6,3"
                                                         HorizontalOptions="Center"
                                                         VerticalOptions="Center"
-                                                        BackgroundColor="{Binding Status,
-                                                            Converter={StaticResource EventStatus},
-                                                            ConverterParameter=background}">
+                                                        BackgroundColor="{Binding Status, Converter={StaticResource EventStatusBackground}}">
                                                         <Label
-                                                            Text="{Binding Status,
-                                                                Converter={StaticResource EventStatus},
-                                                                ConverterParameter=label}"
+                                                            Text="{Binding Status, Converter={StaticResource EventStatusLabel}}"
                                                             FontFamily="OpenSansSemibold"
                                                             FontSize="11"
                                                             HorizontalTextAlignment="Center"
-                                                            TextColor="{Binding Status,
-                                                                Converter={StaticResource EventStatus},
-                                                                ConverterParameter=text}"/>
+                                                            TextColor="{Binding Status, Converter={StaticResource EventStatusText}}"/>
                                                     </Border>
 
                                                 </Grid>
