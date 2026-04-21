@@ -1,4 +1,5 @@
 using CommunityToolkit.Maui;
+using VenueOps.Config;
 using VenueOps.Services;
 using VenueOps.ViewModels;
 using VenueOps.Views.Auth;
@@ -9,9 +10,6 @@ namespace VenueOps;
 
 public static class MauiProgram
 {
-    // ── Backend base URL ─────────────────────────────────────────────────────
-    private const string ApiBaseUrl = "https://e4a5b3af-81cf-4f20-ba8e-2c41ae080308.mock.pstmn.io/api/";
-
     public static MauiApp CreateMauiApp()
     {
         var builder = MauiApp.CreateBuilder();
@@ -28,7 +26,7 @@ public static class MauiProgram
         // ── HTTP ──────────────────────────────────────────────────────────────
         builder.Services.AddHttpClient("VenueOpsApi", client =>
         {
-            client.BaseAddress = new Uri(ApiBaseUrl);
+            client.BaseAddress = new Uri(ApiConfig.ApiBaseUrl);
         });
 
         // ── Services (Singleton) ──────────────────────────────────────────────

@@ -1,0 +1,10 @@
+// Copy this file to ApiConfig.Local.cs (same folder) and set your local backend URL.
+// ApiConfig.Local.cs is gitignored — never commit it.
+
+namespace VenueOps.Config;
+
+internal static partial class ApiConfig
+{
+    static partial void OverrideApiBaseUrl(ref string url)
+        => url = "https://<your-backend-url>/api/";
+}

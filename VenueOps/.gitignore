@@ -102,6 +102,9 @@ desktop.ini
 *.orig
 *.cache
  
+# Local config overrides (never commit)
+**/ApiConfig.Local.cs
+
 # Local temporal files
 tmp/
 temp/
