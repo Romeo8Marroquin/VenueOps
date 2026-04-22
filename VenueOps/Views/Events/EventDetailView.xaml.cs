@@ -16,7 +16,8 @@ public partial class EventDetailView : ContentPage
     protected override void OnAppearing()
     {
         base.OnAppearing();
-        _ = _viewModel.InitializeAsync();
+        if (_viewModel.Detail is null)
+            _ = _viewModel.InitializeAsync();
     }
 
     protected override void OnSizeAllocated(double width, double height)
