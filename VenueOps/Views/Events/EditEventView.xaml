@@ -6,8 +6,8 @@
     xmlns:system="clr-namespace:System;assembly=System.Runtime"
     x:TypeArguments="system:Boolean"
     xmlns:vm="clr-namespace:VenueOps.ViewModels"
-    x:Class="VenueOps.Views.Events.CreateEventView"
-    x:DataType="vm:CreateEventViewModel"
+    x:Class="VenueOps.Views.Events.EditEventView"
+    x:DataType="vm:EditEventViewModel"
     x:Name="DialogCard"
     BackgroundColor="Transparent">
 
@@ -65,7 +65,7 @@
 
                     <Label
                         Grid.Column="0"
-                        Text="Create New Event"
+                        Text="Edit Event"
                         Style="{StaticResource SubHeadline}"
                         VerticalOptions="Center"/>
 
@@ -100,7 +100,6 @@
                          ───────────────────────────────────────────────────── -->
                     <VerticalStackLayout Spacing="14">
 
-                        <!-- Section header -->
                         <VerticalStackLayout Spacing="6">
                             <Label Text="BASIC INFO" Style="{StaticResource SectionHeader}"/>
                             <BoxView HeightRequest="1"/>
@@ -160,7 +159,7 @@
                                 <Label Text="Event Name *" Style="{StaticResource FieldLabel}"/>
                                 <Border Padding="0" Style="{StaticResource InputBorder}">
                                     <Entry
-                                        Placeholder="Summer Gala 2025"
+                                        Placeholder="Enter the event name..."
                                         Text="{Binding EventName}"
                                         ReturnType="Next"/>
                                 </Border>
@@ -170,7 +169,7 @@
                                 <Label Text="Venue Name *" Style="{StaticResource FieldLabel}"/>
                                 <Border Padding="0" Style="{StaticResource InputBorder}">
                                     <Entry
-                                        Placeholder="Grand Ballroom"
+                                        Placeholder="Enter the venue name..."
                                         Text="{Binding VenueName}"
                                         ReturnType="Next"/>
                                 </Border>
@@ -210,13 +209,6 @@
                             <BoxView HeightRequest="1"/>
                         </VerticalStackLayout>
 
-                        <!--
-                            DatePicker and TimePicker each live in their own InputBorder.
-                            Padding="10,0" on the Border adds horizontal breathing room
-                            without fighting the native control's intrinsic insets.
-                            No explicit HeightRequest or Margin overrides needed — the
-                            implicit style's MinimumHeightRequest="44" handles vertical sizing.
-                        -->
                         <VerticalStackLayout Spacing="6">
                             <Label Text="Start Date &amp; Time *" Style="{StaticResource FieldLabel}"/>
                             <Grid ColumnDefinitions="auto,*" ColumnSpacing="20">
@@ -226,15 +218,14 @@
                                         Format="d"
                                         WidthRequest="150"
                                         VerticalOptions="Center"
-                                        BackgroundColor="Transparent" />
+                                        BackgroundColor="Transparent"/>
                                 </Border>
-
                                 <TimePicker
-                                    Grid.Column="1" 
+                                    Grid.Column="1"
                                     Time="{Binding StartTime}"
                                     Margin="0,6,0,-6"
                                     HorizontalOptions="Start"
-                                    BackgroundColor="Transparent" />
+                                    BackgroundColor="Transparent"/>
                             </Grid>
                         </VerticalStackLayout>
 
@@ -270,10 +261,6 @@
 
                         <VerticalStackLayout Spacing="6">
                             <Label Text="Short Description" Style="{StaticResource FieldLabel}"/>
-                            <!--
-                                Editor inside InputBorder: override Padding to give
-                                natural breathing room for multiline text.
-                            -->
                             <Border Style="{StaticResource InputBorder}" Padding="0">
                                 <Editor
                                     Placeholder="A brief summary of the event..."
@@ -402,11 +389,6 @@
                             <BoxView HeightRequest="1"/>
                         </VerticalStackLayout>
 
-                        <!--
-                            Each row: [Label entry] [URL entry] [Remove button]
-                            CommandParameter="{Binding .}" passes the LinkItem instance
-                            to RemoveLinkCommand via x:Reference to the root Popup.
-                        -->
                         <VerticalStackLayout Spacing="10" BindableLayout.ItemsSource="{Binding Links}">
                             <BindableLayout.ItemTemplate>
                                 <DataTemplate x:DataType="vm:LinkItem">
@@ -461,10 +443,6 @@
                             LineBreakMode="WordWrap"
                             Margin="0,0,0,4"/>
 
-                        <!--
-                            Each image item: URL (top row with remove) + AltText | Credit (second row).
-                            Wrapped in a lightly styled border to visually group the 3 fields per item.
-                        -->
                         <VerticalStackLayout Spacing="12" BindableLayout.ItemsSource="{Binding Images}">
                             <BindableLayout.ItemTemplate>
                                 <DataTemplate x:DataType="vm:ImageItem">
@@ -544,7 +522,7 @@
                 </VerticalStackLayout>
 
                 <!-- ════════════════════════════════════════════════════════
-                     FOOTER — Cancel + Create buttons
+                     FOOTER — Cancel + Save buttons
                      ════════════════════════════════════════════════════════ -->
                 <BoxView HeightRequest="1"/>
 
@@ -562,7 +540,7 @@
 
                     <Button
                         Grid.Column="1"
-                        Text="Create Event"
+                        Text="Save Changes"
                         Command="{Binding SubmitCommand}"
                         IsEnabled="{Binding IsNotBusy}"/>
 

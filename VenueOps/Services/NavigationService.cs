@@ -1,6 +1,7 @@
 using CommunityToolkit.Maui;
 using CommunityToolkit.Maui.Core;
 using CommunityToolkit.Maui.Extensions;
+using VenueOps.Models.Events;
 using VenueOps.ViewModels;
 using VenueOps.Views.Auth;
 using VenueOps.Views.Events;
@@ -59,6 +60,28 @@ public sealed class NavigationService(IServiceProvider serviceProvider) : INavig
 
         if (!result.WasDismissedByTappingOutsideOfPopup && result.Result is true)
             await onCreated();
+    }
+
+    public async Task PushEditEventModalAsync(EventDetail detail, Func<Task> onUpdated)
+    {
+        var popup = _serviceProvider.GetRequiredService<EditEventView>();
+        var vm    = (EditEventViewModel)popup.BindingContext;
+        vm.LoadFromDetail(detail);
+
+        Page? host = Application.Current?.Windows[0].Page;
+        if (host is null) return;
+
+        PopupOptions options = new()
+        {
+            CanBeDismissedByTappingOutsideOfPopup = true,
+            PageOverlayColor = Colors.Black.WithAlpha(0.45f),
+            Shape  = null,
+            Shadow = null
+        };
+        IPopupResult<bool> result = await host.ShowPopupAsync<bool>(popup, options);
+
+        if (!result.WasDismissedByTappingOutsideOfPopup && result.Result is true)
+            await onUpdated();
     }
 
     public Task GoToEventDetailAsync(string eventId)

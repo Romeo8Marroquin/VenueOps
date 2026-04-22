@@ -144,6 +144,14 @@ public partial class EventDetailViewModel : BaseViewModel, IQueryAttributable
     private Task RetryAsync() => InitializeAsync();
 
     [RelayCommand]
+    private async Task EditEventAsync()
+    {
+        if (Detail is null) return;
+        var snapshot = Detail;
+        await _navigationService.PushEditEventModalAsync(snapshot, InitializeAsync);
+    }
+
+    [RelayCommand]
     private static async Task OpenLinkAsync(string? url)
     {
         if (!string.IsNullOrWhiteSpace(url) && Uri.TryCreate(url, UriKind.Absolute, out var uri))

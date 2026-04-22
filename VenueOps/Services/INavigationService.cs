@@ -21,6 +21,12 @@ public interface INavigationService
     /// <summary>Navigates to the EventDetailView for the given event ID.</summary>
     Task GoToEventDetailAsync(string eventId);
 
+    /// <summary>
+    /// Pushes EditEventView as a modal pre-populated with <paramref name="detail"/>.
+    /// <paramref name="onUpdated"/> is called after the modal closes with a saved result.
+    /// </summary>
+    Task PushEditEventModalAsync(VenueOps.Models.Events.EventDetail detail, Func<Task> onUpdated);
+
     /// <summary>Pops the current Shell page (go back).</summary>
     Task GoBackAsync();
 }
