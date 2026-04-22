@@ -483,6 +483,12 @@
                                                 ColumnSpacing="8"
                                                 Padding="0,10,0,4">
 
+                                                <Grid.GestureRecognizers>
+                                                    <TapGestureRecognizer
+                                                        Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.GoToEventDetailCommand}"
+                                                        CommandParameter="{Binding}"/>
+                                                </Grid.GestureRecognizers>
+
                                                 <Label
                                                     Grid.Row="0" Grid.Column="0"
                                                     Text="{Binding EventName}"
@@ -571,6 +577,12 @@
                                                     ColumnDefinitions="2*,*,*,*,*,90"
                                                     ColumnSpacing="12"
                                                     Padding="0,10,0,10">
+
+                                                    <Grid.GestureRecognizers>
+                                                        <TapGestureRecognizer
+                                                            Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.GoToEventDetailCommand}"
+                                                            CommandParameter="{Binding}"/>
+                                                    </Grid.GestureRecognizers>
 
                                                     <Label
                                                         Grid.Column="0"

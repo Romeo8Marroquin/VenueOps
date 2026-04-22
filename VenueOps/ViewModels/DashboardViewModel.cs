@@ -119,6 +119,10 @@ public partial class DashboardViewModel : BaseViewModel
         => _navigationService.PushCreateEventModalAsync(InitializeAsync);
 
     [RelayCommand]
+    private Task GoToEventDetailAsync(RecentEvent evt)
+        => _navigationService.GoToEventDetailAsync(evt.Id);
+
+    [RelayCommand]
     private async Task SearchAsync()
     {
         var encoded = Uri.EscapeDataString(SearchQuery ?? string.Empty);

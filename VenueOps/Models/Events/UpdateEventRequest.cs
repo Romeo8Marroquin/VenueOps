@@ -2,8 +2,11 @@ using System.Text.Json.Serialization;
 
 namespace VenueOps.Models.Events;
 
-public sealed class CreateEventRequest
+public sealed class UpdateEventRequest
 {
+    [JsonPropertyName("id")]
+    public string Id { get; set; } = string.Empty;
+
     [JsonPropertyName("eventName")]
     public string EventName { get; set; } = string.Empty;
 
@@ -19,8 +22,11 @@ public sealed class CreateEventRequest
     [JsonPropertyName("endDateUtc")]
     public DateTime EndDateUtc { get; set; }
 
-    [JsonPropertyName("expectedAtendees")]
-    public int ExpectedAtendees { get; set; }
+    [JsonPropertyName("expectedAttendees")]
+    public int ExpectedAttendees { get; set; }
+
+    [JsonPropertyName("attendeeCount")]
+    public int AttendeeCount { get; set; }
 
     [JsonPropertyName("shortDescription")]
     public string? ShortDescription { get; set; }

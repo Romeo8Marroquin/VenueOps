@@ -14,4 +14,12 @@ public interface IEventsService
     Task<CreateEventResponse?> CreateEventAsync(
         CreateEventRequest request,
         CancellationToken ct = default);
+
+    Task<EventDetail?> GetEventDetailAsync(
+        string eventId,
+        CancellationToken ct = default);
+
+    Task<EventDetail?> UpdateEventAsync(
+        UpdateEventRequest request,
+        CancellationToken ct = default);
 }

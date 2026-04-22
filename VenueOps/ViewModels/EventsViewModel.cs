@@ -106,6 +106,10 @@ public partial class EventsViewModel : BaseViewModel, IQueryAttributable
         => _navigationService.PushCreateEventModalAsync(
             () => Events.LoadAsync());
 
+    [RelayCommand]
+    private Task GoToEventDetailAsync(RecentEvent evt)
+        => _navigationService.GoToEventDetailAsync(evt.Id);
+
     partial void OnEventsStatusFilterChanged(string value) => _ = Events.LoadAsync();
     partial void OnSortByFilterChanged(string value)       => _ = Events.LoadAsync();
 }

@@ -8,10 +8,11 @@ using VenueOps.Services;
 
 namespace VenueOps.ViewModels;
 
-public partial class CreateEventViewModel : BaseViewModel
+public partial class EditEventViewModel : BaseViewModel
 {
     private readonly IEventsService _eventsService;
-    private readonly IPopupService _popupService;
+    private readonly IPopupService  _popupService;
+    private string _eventId = string.Empty;
 
     // ── Layout ────────────────────────────────────────────────────────────
 
@@ -68,7 +69,7 @@ public partial class CreateEventViewModel : BaseViewModel
 
     // ── Dynamic collections ───────────────────────────────────────────────
 
-    public ObservableCollection<LinkItem> Links { get; } = [];
+    public ObservableCollection<LinkItem>  Links  { get; } = [];
     public ObservableCollection<ImageItem> Images { get; } = [];
 
     // ── Validation feedback ───────────────────────────────────────────────
@@ -81,13 +82,58 @@ public partial class CreateEventViewModel : BaseViewModel
 
     // ── Options ───────────────────────────────────────────────────────────
 
-    public IReadOnlyList<string> StatusOptions { get; } = ["Draft", "Confirmed", "Cancelled"];
+    public IReadOnlyList<string> StatusOptions { get; } = ["Draft", "Confirmed", "Cancelled", "Completed"];
 
-    public CreateEventViewModel(IEventsService eventsService, IPopupService popupService)
+    public EditEventViewModel(IEventsService eventsService, IPopupService popupService)
     {
         _eventsService = eventsService;
-        _popupService = popupService;
-        Title = "New Event";
+        _popupService  = popupService;
+        Title = "Edit Event";
+    }
+
+    // ── Seed from loaded detail ───────────────────────────────────────────
+
+    public void LoadFromDetail(EventDetail detail)
+    {
+        _eventId  = detail.Id;
+        EventName = detail.EventName;
+        VenueName = detail.VenueName;
+
+        Status = detail.Status switch
+        {
+            "confirmed" => "Confirmed",
+            "cancelled" => "Cancelled",
+            "completed" => "Completed",
+            _           => "Draft"
+        };
+
+        ExpectedAttendeesText = detail.ExpectedAtendees > 0
+            ? detail.ExpectedAtendees.ToString()
+            : string.Empty;
+
+        var start = detail.StartDateUtc.ToLocalTime();
+        StartDate = start.Date;
+        StartTime = start.TimeOfDay;
+
+        var end = detail.EndDateUtc.ToLocalTime();
+        EndDate = end.Date;
+        EndTime = end.TimeOfDay;
+
+        ShortDescription = detail.ShortDescription ?? string.Empty;
+        LocationAddress  = detail.Location?.FormattedAddress ?? string.Empty;
+        OrganizerName    = detail.Organizer?.Name ?? string.Empty;
+        OrganizerWebsite = detail.Organizer?.WebsiteUrl ?? string.Empty;
+        TagsText         = detail.Tags is { Count: > 0 }
+            ? string.Join(", ", detail.Tags)
+            : string.Empty;
+
+        Links.Clear();
+        foreach (var link in detail.Links)
+            Links.Add(new LinkItem { Label = link.Label, Url = link.Url });
+
+        Images.Clear();
+        foreach (var img in detail.Images)
+            Images.Add(new ImageItem { Url = img.Url, AltText = img.AltText, Credit = img.Credit });
     }
 
     // ── Commands — collections ────────────────────────────────────────────
@@ -133,14 +179,16 @@ public partial class CreateEventViewModel : BaseViewModel
                 .Select(i => new EventImage { Url = i.Url.Trim(), AltText = i.AltText.Trim(), Credit = i.Credit.Trim() })
                 .ToList();
 
-            var request = new CreateEventRequest
+            var request = new UpdateEventRequest
             {
+                Id               = _eventId,
                 EventName        = EventName.Trim(),
                 VenueName        = VenueName.Trim(),
                 Status           = Status.ToLowerInvariant(),
                 StartDateUtc     = startLocal.ToUniversalTime(),
                 EndDateUtc       = endLocal.ToUniversalTime(),
-                ExpectedAtendees = int.TryParse(ExpectedAttendeesText, out var count) ? count : 0,
+                ExpectedAttendees = int.TryParse(ExpectedAttendeesText, out var count) ? count : 0,
+                AttendeeCount    = 0,
                 ShortDescription = string.IsNullOrWhiteSpace(ShortDescription) ? null : ShortDescription.Trim(),
                 Location         = string.IsNullOrWhiteSpace(LocationAddress)
                                        ? null
@@ -157,11 +205,11 @@ public partial class CreateEventViewModel : BaseViewModel
                 Images = images.Count > 0 ? images : null,
             };
 
-            var result = await _eventsService.CreateEventAsync(request);
+            var updated = await _eventsService.UpdateEventAsync(request);
 
             IsBusy = false;
 
-            if (result is null)
+            if (updated is null)
             {
                 ErrorMessage = "Something went wrong. Please try again.";
                 return;
@@ -171,8 +219,8 @@ public partial class CreateEventViewModel : BaseViewModel
             if (hostPage is not null)
             {
                 await hostPage.DisplayAlertAsync(
-                    "Event Created",
-                    $"\"{result.EventName}\" was created successfully.\nRef: {result.BookingReference}",
+                    "Event Updated",
+                    $"\"{updated.EventName}\" was updated successfully.\nRef: {updated.BookingReference}",
                     "OK");
             }
 
@@ -228,27 +276,4 @@ public partial class CreateEventViewModel : BaseViewModel
 
         return true;
     }
-}
-
-// ── Collection item types ─────────────────────────────────────────────────────
-
-public partial class LinkItem : ObservableObject
-{
-    [ObservableProperty]
-    public partial string Label { get; set; } = string.Empty;
-
-    [ObservableProperty]
-    public partial string Url { get; set; } = string.Empty;
-}
-
-public partial class ImageItem : ObservableObject
-{
-    [ObservableProperty]
-    public partial string Url { get; set; } = string.Empty;
-
-    [ObservableProperty]
-    public partial string AltText { get; set; } = string.Empty;
-
-    [ObservableProperty]
-    public partial string Credit { get; set; } = string.Empty;
 }
