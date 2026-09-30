@@ -82,4 +82,11 @@
 		<InternalsVisibleTo Include="VenueOps.Tests" />
 	</ItemGroup>
 
+	<ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
+		<!-- The plain net10.0 build exists only for unit tests and has no app host. MauiProgram is
+		     called solely from the Platforms/* entry points, which this target never compiles,
+		     and its platform-only toolkit registration would raise CA1416 here. -->
+		<Compile Remove="MauiProgram.cs" />
+	</ItemGroup>
+
 </Project>
