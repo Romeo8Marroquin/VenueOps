@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using Moq;
 using VenueOps.Models;
 using VenueOps.Services;
@@ -98,5 +99,91 @@ public class AppShellViewModelTests
         await sut.SignOutCommand.ExecuteAsync(null);
 
         _navMock.Verify(n => n.NavigateToLoginAsync(), Times.Never);
+    }
+
+    [Fact]
+    public async Task SignOutCommand_ResetsBusy_AfterNavigating()
+    {
+        _navMock.Setup(n => n.NavigateToLoginAsync()).Returns(Task.CompletedTask);
+        AppShellViewModel sut = CreateSut();
+
+        await sut.SignOutCommand.ExecuteAsync(null);
+
+        Assert.False(sut.IsBusy);
+    }
+
+    [Fact]
+    public void IsBusy_RaisesSignOutCommandCanExecuteChanged()
+    {
+        AppShellViewModel sut = CreateSut();
+        int raised = 0;
+        sut.SignOutCommand.CanExecuteChanged += (_, _) => raised++;
+
+        sut.IsBusy = true;
+        sut.IsBusy = false;
+
+        Assert.Equal(2, raised);
+    }
+
+    // ── Additional edge cases ─────────────────────────────────────────────────
+
+    [Fact]
+    public void ShortEmail_ReturnsFullString_WhenEmailStartsWithAt()
+    {
+        _sessionMock.Setup(s => s.CurrentUser).Returns(new UserInfo { Email = "@example.invalid" });
+
+        Assert.Equal("@example.invalid", CreateSut().ShortEmail);
+    }
+
+    [Fact]
+    public void UserInitial_ReturnsFallback_WhenNameIsEmpty()
+    {
+        _sessionMock.Setup(s => s.CurrentUser).Returns(new UserInfo { Name = string.Empty });
+
+        Assert.Equal("U", CreateSut().UserInitial);
+    }
+
+    // ── Session change notifications ──────────────────────────────────────────
+
+    [Fact]
+    public void SessionCurrentUserChange_RaisesUserDisplayNotifications()
+    {
+        AppShellViewModel sut = CreateSut();
+        List<string?> raised = [];
+        sut.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+
+        _sessionMock.Raise(s => s.PropertyChanged += null, new PropertyChangedEventArgs(nameof(ISessionService.CurrentUser)));
+
+        Assert.Equal(
+            [nameof(AppShellViewModel.UserName), nameof(AppShellViewModel.ShortEmail), nameof(AppShellViewModel.UserInitial)],
+            raised);
+    }
+
+    [Fact]
+    public void SessionOtherPropertyChange_RaisesNothing()
+    {
+        AppShellViewModel sut = CreateSut();
+        List<string?> raised = [];
+        sut.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+
+        _sessionMock.Raise(s => s.PropertyChanged += null, new PropertyChangedEventArgs("SomethingElse"));
+
+        Assert.Empty(raised);
+    }
+
+    [Fact]
+    public void RealSessionService_UserChangeUpdatesDisplayedValues()
+    {
+        SessionService session = new();
+        AppShellViewModel sut = new(_navMock.Object, session);
+        List<string?> raised = [];
+        sut.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+
+        session.CurrentUser = new UserInfo { Name = "bea stone", Email = "bea@example.invalid" };
+
+        Assert.Contains(nameof(AppShellViewModel.UserName), raised);
+        Assert.Equal("bea stone", sut.UserName);
+        Assert.Equal("bea", sut.ShortEmail);
+        Assert.Equal("B", sut.UserInitial);
     }
 }
