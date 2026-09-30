@@ -10,7 +10,7 @@
     **/VenueOps/Platforms/**              Platform entry points (not compiled for net10.0 anyway).
     **/VenueOps/App.xaml.cs               Application root: creates Window/AppShell via MAUI runtime.
     **/VenueOps/AppShell.xaml.cs          Shell root: route registration against Shell/Routing statics.
-    **/VenueOps/MauiProgram.cs            DI/host composition via MauiApp.CreateBuilder().
+    **/VenueOps/MauiProgram.cs            DI/host composition (not compiled for net10.0; listed for clarity).
     **/VenueOps/Config/ApiConfig.cs       Machine configuration: its behaviour depends on the gitignored,
                                           machine-local Config/ApiConfig.Local.cs partial, which cannot be
                                           supplied from another assembly. Out of unit-test scope.
