@@ -6,6 +6,8 @@
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
     <LangVersion>14.0</LangVersion>
+    <!-- Coverage scope and exclusions for the referenced VenueOps assembly -->
+    <RunSettingsFilePath>$(MSBuildThisFileDirectory)coverlet.runsettings</RunSettingsFilePath>
   </PropertyGroup>
 
   <ItemGroup>
@@ -21,37 +23,9 @@
     <Using Include="Xunit" />
   </ItemGroup>
 
-  <!-- Link source files that compile on plain net10.0 (no MAUI types) -->
+  <!-- The app project multi-targets plain net10.0 so it can be referenced from unit tests -->
   <ItemGroup>
-    <!-- Models -->
-    <Compile Include="..\VenueOps\Models\LoginRequest.cs" />
-    <Compile Include="..\VenueOps\Models\LoginResponse.cs" />
-    <Compile Include="..\VenueOps\Models\RegisterRequest.cs" />
-    <Compile Include="..\VenueOps\Models\RegisterResponse.cs" />
-    <Compile Include="..\VenueOps\Models\UserInfo.cs" />
-    <Compile Include="..\VenueOps\Models\Common\PagedResult.cs" />
-    <Compile Include="..\VenueOps\Models\Events\CreateEventRequest.cs" />
-    <Compile Include="..\VenueOps\Models\Events\CreateEventResponse.cs" />
-    <Compile Include="..\VenueOps\Models\Events\EventDetail.cs" />
-    <Compile Include="..\VenueOps\Models\Events\RecentEvent.cs" />
-    <Compile Include="..\VenueOps\Models\Dashboard\DashboardOverview.cs" />
-    <Compile Include="..\VenueOps\Models\Dashboard\DashboardStats.cs" />
-    <Compile Include="..\VenueOps\Models\Dashboard\InsightInfo.cs" />
-    <!-- Service interfaces and exception (no MAUI dependencies) -->
-    <Compile Include="..\VenueOps\Services\AuthException.cs" />
-    <Compile Include="..\VenueOps\Services\IAuthService.cs" />
-    <Compile Include="..\VenueOps\Services\IDashboardService.cs" />
-    <Compile Include="..\VenueOps\Services\IDialogService.cs" />
-    <Compile Include="..\VenueOps\Services\IEventsService.cs" />
-    <Compile Include="..\VenueOps\Services\INavigationService.cs" />
-    <Compile Include="..\VenueOps\Services\ISessionService.cs" />
-    <Compile Include="..\VenueOps\Services\SessionService.cs" />
-    <!-- ViewModels (CommunityToolkit.Mvvm only — no MAUI types) -->
-    <Compile Include="..\VenueOps\ViewModels\BaseViewModel.cs" />
-    <Compile Include="..\VenueOps\ViewModels\AppShellViewModel.cs" />
-    <Compile Include="..\VenueOps\ViewModels\LoginViewModel.cs" />
-    <Compile Include="..\VenueOps\ViewModels\RegisterViewModel.cs" />
-    <Compile Include="..\VenueOps\ViewModels\Common\PaginatedSection.cs" />
+    <ProjectReference Include="..\VenueOps\VenueOps.csproj" />
   </ItemGroup>
 
 </Project>

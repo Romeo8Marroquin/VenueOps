@@ -37,6 +37,7 @@ bld/
 [Ll]og/
 [Ll]ogs/
 artifacts/
+TestResults/
  
 # Build results in nested folders
 **/[Bb]in/*

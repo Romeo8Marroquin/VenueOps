@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Coverage settings for `dotnet test -collect:"XPlat Code Coverage"`.
+
+  Scope: the whole VenueOps assembly (net10.0 build referenced by this test project).
+  Test code (VenueOps.Tests) is not instrumented.
+
+  ExcludeByFile exclusions: only code that cannot be unit tested without refactoring the app:
+    **/VenueOps/Views/**                  XAML pages/popups: UI composition, need a running MAUI app.
+    **/VenueOps/Platforms/**              Platform entry points (not compiled for net10.0 anyway).
+    **/VenueOps/App.xaml.cs               Application root: creates Window/AppShell via MAUI runtime.
+    **/VenueOps/AppShell.xaml.cs          Shell root: route registration against Shell/Routing statics.
+    **/VenueOps/MauiProgram.cs            DI/host composition via MauiApp.CreateBuilder().
+    **/VenueOps/Config/ApiConfig.cs       Machine configuration: its behaviour depends on the gitignored,
+                                          machine-local Config/ApiConfig.Local.cs partial, which cannot be
+                                          supplied from another assembly. Out of unit-test scope.
+    **/VenueOps/Services/DialogService.cs      Thin wrapper over Application.Current page dialogs.
+    **/VenueOps/Services/NavigationService.cs  Thin wrapper over Application.Current / Shell.Current.
+    **/obj/**                             Build-generated sources (XAML source generator output, etc.).
+
+  ExcludeByAttribute: GeneratedCodeAttribute covers source-generated members
+  (CommunityToolkit.Mvvm [ObservableProperty]/[RelayCommand], XAML generator output).
+-->
+<RunSettings>
+  <DataCollectionRunSettings>
+    <DataCollectors>
+      <DataCollector friendlyName="XPlat Code Coverage">
+        <Configuration>
+          <Format>cobertura</Format>
+          <Include>[VenueOps]*</Include>
+          <ExcludeByFile>**/VenueOps/Views/**,**/VenueOps/Platforms/**,**/VenueOps/App.xaml.cs,**/VenueOps/AppShell.xaml.cs,**/VenueOps/MauiProgram.cs,**/VenueOps/Config/ApiConfig.cs,**/VenueOps/Services/DialogService.cs,**/VenueOps/Services/NavigationService.cs,**/obj/**</ExcludeByFile>
+          <ExcludeByAttribute>GeneratedCodeAttribute</ExcludeByAttribute>
+        </Configuration>
+      </DataCollector>
+    </DataCollectors>
+  </DataCollectionRunSettings>
+</RunSettings>

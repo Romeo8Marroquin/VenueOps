@@ -148,4 +148,81 @@ public class LoginViewModelTests
         Assert.Equal("An unexpected error occurred. Please try again.", sut.ErrorMessage);
         Assert.False(sut.IsBusy);
     }
+
+    // ── Initial state ─────────────────────────────────────────────────────────
+
+    [Fact]
+    public void Constructor_SetsTitleAndEmptyFields()
+    {
+        LoginViewModel sut = CreateSut();
+
+        Assert.Equal("Sign In", sut.Title);
+        Assert.Equal(string.Empty, sut.Email);
+        Assert.Equal(string.Empty, sut.Password);
+        Assert.False(sut.HasError);
+    }
+
+    // ── Busy state ────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void LoginCommand_CanExecuteTracksBusyState()
+    {
+        LoginViewModel sut = CreateSut();
+        int raised = 0;
+        sut.LoginCommand.CanExecuteChanged += (_, _) => raised++;
+        Assert.True(sut.LoginCommand.CanExecute(null));
+
+        sut.IsBusy = true;
+
+        Assert.False(sut.LoginCommand.CanExecute(null));
+        Assert.Equal(1, raised);
+    }
+
+    [Fact]
+    public async Task LoginCommand_DoesNothing_WhenAlreadyBusy()
+    {
+        LoginViewModel sut = CreateSut();
+        sut.Email = CreateEmail();
+        sut.Password = CreateOpaqueValue();
+        sut.IsBusy = true;
+
+        await sut.LoginCommand.ExecuteAsync(null);
+
+        Assert.Equal(string.Empty, sut.ErrorMessage);
+        _authMock.Verify(a => a.LoginAsync(It.IsAny<LoginRequest>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task LoginCommand_SendsEnteredCredentialsAndClearsPreviousError()
+    {
+        LoginRequest? sent = null;
+        _authMock
+            .Setup(a => a.LoginAsync(It.IsAny<LoginRequest>(), It.IsAny<CancellationToken>()))
+            .Callback<LoginRequest, CancellationToken>((r, _) => sent = r)
+            .ReturnsAsync(new LoginResponse { Success = true, Token = CreateSessionToken() });
+        _navMock.Setup(n => n.NavigateToMainAsync()).Returns(Task.CompletedTask);
+        LoginViewModel sut = CreateSut();
+        sut.Email = CreateEmail();
+        sut.Password = CreateOpaqueValue();
+        sut.ErrorMessage = "stale error";
+
+        await sut.LoginCommand.ExecuteAsync(null);
+
+        Assert.NotNull(sent);
+        Assert.Equal(CreateEmail(), sent.Email);
+        Assert.Equal(CreateOpaqueValue(), sent.Password);
+        Assert.False(sut.HasError);
+    }
+
+    // ── Navigation ────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task NavigateToRegisterCommand_NavigatesToRegister()
+    {
+        _navMock.Setup(n => n.NavigateToRegisterAsync()).Returns(Task.CompletedTask);
+
+        await CreateSut().NavigateToRegisterCommand.ExecuteAsync(null);
+
+        _navMock.Verify(n => n.NavigateToRegisterAsync(), Times.Once);
+    }
 }
