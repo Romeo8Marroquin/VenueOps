@@ -40,6 +40,8 @@ public partial class EventDetailViewModel : BaseViewModel, IQueryAttributable
     [NotifyPropertyChangedFor(nameof(HasTags))]
     [NotifyPropertyChangedFor(nameof(HasLinks))]
     [NotifyPropertyChangedFor(nameof(DateRangeDisplay))]
+    [NotifyPropertyChangedFor(nameof(DurationDisplay))]
+    [NotifyPropertyChangedFor(nameof(HasDuration))]
     [NotifyPropertyChangedFor(nameof(AttendeesLabel))]
     [NotifyPropertyChangedFor(nameof(AttendeesDisplay))]
     [NotifyPropertyChangedFor(nameof(GalleryImages))]
@@ -76,6 +78,38 @@ public partial class EventDetailViewModel : BaseViewModel, IQueryAttributable
                 return $"{start:MMM d, yyyy}  ·  {start:h:mm tt} – {end:h:mm tt}";
             return $"{start:MMM d} – {end:MMM d, yyyy}";
         }
+    }
+
+    /// <summary>
+    /// How long the event lasts, e.g. "2 h 30 min" or "2 d 4 h". Empty when no event is
+    /// loaded or the end is not after the start. Uses the UTC values, so it does not
+    /// depend on the device time zone.
+    /// </summary>
+    public string DurationDisplay
+    {
+        get
+        {
+            if (Detail is null || Detail.EndDateUtc <= Detail.StartDateUtc) return string.Empty;
+            return FormatDuration(Detail.EndDateUtc - Detail.StartDateUtc);
+        }
+    }
+
+    public bool HasDuration => DurationDisplay.Length > 0;
+
+    // Under one day: hours and minutes; otherwise days and hours. Any remainder below the
+    // last displayed unit is truncated, and a zero last unit is omitted.
+    private static string FormatDuration(TimeSpan duration)
+    {
+        if (duration < TimeSpan.FromDays(1))
+        {
+            return duration.Minutes == 0
+                ? FormattableString.Invariant($"{duration.Hours} h")
+                : FormattableString.Invariant($"{duration.Hours} h {duration.Minutes} min");
+        }
+
+        return duration.Hours == 0
+            ? FormattableString.Invariant($"{duration.Days} d")
+            : FormattableString.Invariant($"{duration.Days} d {duration.Hours} h");
     }
 
     private static readonly HashSet<string> _finalStatuses =
