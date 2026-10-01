@@ -244,6 +244,170 @@ public class EventDetailViewModelTests
             sut.DateRangeDisplay));
     }
 
+    // ── Duration ──────────────────────────────────────────────────────────────
+
+    private EventDetailViewModel CreateSutWithDuration(TimeSpan duration)
+    {
+        EventDetail detail = CreateDetail();
+        detail.EndDateUtc = detail.StartDateUtc + duration;
+        return CreateLoadedSut(detail);
+    }
+
+    [Fact]
+    public async Task Duration_IsShown_AfterInitializeAsyncLoadsAnEventEndingAfterItStarts()
+    {
+        SetupDetail(CreateDetail());
+        EventDetailViewModel sut = CreateSut();
+        sut.ApplyQueryAttributes(new Dictionary<string, object> { ["id"] = "evt-500" });
+
+        await sut.InitializeAsync();
+
+        Assert.True(sut.HasDuration);
+        Assert.NotEmpty(sut.DurationDisplay);
+    }
+
+    [Fact]
+    public void DurationDisplay_ShowsHoursAndMinutes_WhenUnderOneDay()
+    {
+        EventDetailViewModel sut = CreateSutWithDuration(new TimeSpan(2, 30, 0));
+
+        Assert.Equal("2 h 30 min", sut.DurationDisplay);
+        Assert.True(sut.HasDuration);
+    }
+
+    [Fact]
+    public void DurationDisplay_OmitsMinutes_WhenWholeHours()
+    {
+        EventDetailViewModel sut = CreateSutWithDuration(TimeSpan.FromHours(3));
+
+        Assert.Equal("3 h", sut.DurationDisplay);
+    }
+
+    [Theory]
+    [InlineData(23, 59, "23 h 59 min")]
+    [InlineData(0, 45, "0 h 45 min")]
+    public void DurationDisplay_ShowsEdgesOfTheUnderOneDayFormat(int hours, int minutes, string expected)
+    {
+        EventDetailViewModel sut = CreateSutWithDuration(new TimeSpan(hours, minutes, 0));
+
+        Assert.Equal(expected, sut.DurationDisplay);
+        Assert.True(sut.HasDuration);
+    }
+
+    [Fact]
+    public void DurationDisplay_ShowsDaysAndHours_WhenOneDayOrMore()
+    {
+        EventDetailViewModel sut = CreateSutWithDuration(new TimeSpan(2, 4, 0, 0));
+
+        Assert.Equal("2 d 4 h", sut.DurationDisplay);
+        Assert.True(sut.HasDuration);
+    }
+
+    [Theory]
+    [InlineData(24, "1 d")]
+    [InlineData(72, "3 d")]
+    public void DurationDisplay_OmitsHours_WhenWholeDays(int totalHours, string expected)
+    {
+        EventDetailViewModel sut = CreateSutWithDuration(TimeSpan.FromHours(totalHours));
+
+        Assert.Equal(expected, sut.DurationDisplay);
+    }
+
+    [Fact]
+    public void DurationDisplay_TruncatesMinutesBelowTheDisplayedUnit()
+    {
+        EventDetailViewModel sut = CreateSutWithDuration(new TimeSpan(1, 0, 30, 0));
+
+        Assert.Equal("1 d", sut.DurationDisplay);
+    }
+
+    [Fact]
+    public void DurationDisplay_TruncatesMinutesBelowHours_WhenOverOneDay()
+    {
+        EventDetailViewModel sut = CreateSutWithDuration(new TimeSpan(2, 4, 59, 0));
+
+        Assert.Equal("2 d 4 h", sut.DurationDisplay);
+    }
+
+    [Fact]
+    public void DurationDisplay_IsEmpty_WhenNoDetailIsLoaded()
+    {
+        EventDetailViewModel sut = CreateSut();
+
+        Assert.Equal(string.Empty, sut.DurationDisplay);
+        Assert.False(sut.HasDuration);
+    }
+
+    [Fact]
+    public void DurationDisplay_IsEmpty_WhenEndEqualsStart()
+    {
+        EventDetailViewModel sut = CreateSutWithDuration(TimeSpan.Zero);
+
+        Assert.Equal(string.Empty, sut.DurationDisplay);
+        Assert.False(sut.HasDuration);
+    }
+
+    [Fact]
+    public void DurationDisplay_IsEmpty_WhenEndIsBeforeStart()
+    {
+        EventDetailViewModel sut = CreateSutWithDuration(TimeSpan.FromMinutes(-30));
+
+        Assert.Equal(string.Empty, sut.DurationDisplay);
+        Assert.False(sut.HasDuration);
+    }
+
+    [Fact]
+    public async Task Duration_IsHidden_WhenServiceReturnsNull()
+    {
+        SetupDetail(null);
+        EventDetailViewModel sut = CreateLoadedSut(CreateDetail());
+        sut.ApplyQueryAttributes(new Dictionary<string, object> { ["id"] = "evt-missing" });
+
+        await sut.InitializeAsync();
+
+        Assert.Null(sut.Detail);
+        Assert.Equal(string.Empty, sut.DurationDisplay);
+        Assert.False(sut.HasDuration);
+    }
+
+    [Fact]
+    public async Task Duration_IsHidden_WhenServiceThrows()
+    {
+        _eventsMock
+            .Setup(e => e.GetEventDetailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new HttpRequestException("offline"));
+        EventDetailViewModel sut = CreateSut();
+        sut.ApplyQueryAttributes(new Dictionary<string, object> { ["id"] = "evt-500" });
+
+        await sut.InitializeAsync();
+
+        Assert.Null(sut.Detail);
+        Assert.Equal(string.Empty, sut.DurationDisplay);
+        Assert.False(sut.HasDuration);
+    }
+
+    [Fact]
+    public void Detail_RaisesDurationNotifications_AndDurationHidesWhenDetailIsCleared()
+    {
+        EventDetailViewModel sut = CreateSut();
+        List<string?> raised = [];
+        sut.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+
+        sut.Detail = CreateDetail();
+
+        Assert.Contains(nameof(EventDetailViewModel.DurationDisplay), raised);
+        Assert.Contains(nameof(EventDetailViewModel.HasDuration), raised);
+        Assert.True(sut.HasDuration);
+
+        raised.Clear();
+        sut.Detail = null;
+
+        Assert.Contains(nameof(EventDetailViewModel.DurationDisplay), raised);
+        Assert.Contains(nameof(EventDetailViewModel.HasDuration), raised);
+        Assert.Equal(string.Empty, sut.DurationDisplay);
+        Assert.False(sut.HasDuration);
+    }
+
     // ── Attendees ─────────────────────────────────────────────────────────────
 
     [Theory]
