@@ -226,8 +226,19 @@ public partial class CreateEventViewModel : BaseViewModel
             return false;
         }
 
+        if (!string.IsNullOrWhiteSpace(OrganizerWebsite)
+            && !IsAbsoluteHttpUrl(OrganizerWebsite.Trim()))
+        {
+            ErrorMessage = "Organizer website must be a full http or https address.";
+            return false;
+        }
+
         return true;
     }
+
+    private static bool IsAbsoluteHttpUrl(string value)
+        => Uri.TryCreate(value, UriKind.Absolute, out var uri)
+           && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
 }
 
 // ── Collection item types ─────────────────────────────────────────────────────

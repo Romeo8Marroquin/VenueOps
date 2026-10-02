@@ -161,6 +161,171 @@ public class CreateEventViewModelTests
         _eventsMock.Verify(e => e.CreateEventAsync(It.IsAny<CreateEventRequest>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
+    // ── Organizer website validation ──────────────────────────────────────────
+
+    private const string WebsiteError = "Organizer website must be a full http or https address.";
+
+    private void VerifyServiceNeverCalled() =>
+        _eventsMock.Verify(e => e.CreateEventAsync(It.IsAny<CreateEventRequest>(), It.IsAny<CancellationToken>()), Times.Never);
+
+    private void VerifyServiceCalledOnce() =>
+        _eventsMock.Verify(e => e.CreateEventAsync(It.IsAny<CreateEventRequest>(), It.IsAny<CancellationToken>()), Times.Once);
+
+    [Fact]
+    public async Task SubmitCommand_AcceptsEmptyOrganizerWebsite()
+    {
+        CreateEventViewModel sut = CreateValidSut();
+        sut.OrganizerName = "Tidal Collective";
+        sut.OrganizerWebsite = string.Empty;
+
+        await sut.SubmitCommand.ExecuteAsync(null);
+
+        VerifyServiceCalledOnce();
+        Assert.NotNull(_sent?.Organizer);
+        Assert.Null(_sent.Organizer.WebsiteUrl);
+        Assert.False(sut.HasError);
+    }
+
+    [Theory]
+    [InlineData("   ")]
+    [InlineData("\t")]
+    public async Task SubmitCommand_AcceptsWhitespaceOnlyOrganizerWebsite(string website)
+    {
+        CreateEventViewModel sut = CreateValidSut();
+        sut.OrganizerName = "Tidal Collective";
+        sut.OrganizerWebsite = website;
+
+        await sut.SubmitCommand.ExecuteAsync(null);
+
+        VerifyServiceCalledOnce();
+        Assert.NotNull(_sent?.Organizer);
+        Assert.Null(_sent.Organizer.WebsiteUrl);
+        Assert.False(sut.HasError);
+    }
+
+    [Theory]
+    [InlineData("venue.example")]
+    [InlineData("ftp://files.example.invalid")]
+    [InlineData("mailto:organiser@example.invalid")]
+    [InlineData("  venue.example  ")]
+    public async Task SubmitCommand_RejectsOrganizerWebsite_WhenNotAbsoluteHttpOrHttps(string website)
+    {
+        CreateEventViewModel sut = CreateValidSut();
+        sut.OrganizerName = "Tidal Collective";
+        sut.OrganizerWebsite = website;
+
+        await sut.SubmitCommand.ExecuteAsync(null);
+
+        Assert.Equal(WebsiteError, sut.ErrorMessage);
+        Assert.True(sut.HasError);
+        Assert.False(sut.IsBusy);
+        VerifyServiceNeverCalled();
+        VerifyPopupClosed(true, Times.Never());
+    }
+
+    [Fact]
+    public async Task SubmitCommand_RejectsInvalidOrganizerWebsite_WhenOrganizerNameIsBlank()
+    {
+        CreateEventViewModel sut = CreateValidSut();
+        sut.OrganizerName = string.Empty;
+        sut.OrganizerWebsite = "venue.example";
+
+        await sut.SubmitCommand.ExecuteAsync(null);
+
+        Assert.Equal(WebsiteError, sut.ErrorMessage);
+        Assert.True(sut.HasError);
+        VerifyServiceNeverCalled();
+    }
+
+    [Fact]
+    public async Task SubmitCommand_SendsTrimmedOrganizerWebsite_WhenValid()
+    {
+        CreateEventViewModel sut = CreateValidSut();
+        sut.OrganizerName = "Tidal Collective";
+        sut.OrganizerWebsite = "  https://organiser.example.invalid  ";
+
+        await sut.SubmitCommand.ExecuteAsync(null);
+
+        VerifyServiceCalledOnce();
+        Assert.False(sut.HasError);
+        Assert.NotNull(_sent?.Organizer);
+        Assert.Equal("https://organiser.example.invalid", _sent.Organizer.WebsiteUrl);
+    }
+
+    [Fact]
+    public async Task SubmitCommand_AcceptsHttpOrganizerWebsite()
+    {
+        CreateEventViewModel sut = CreateValidSut();
+        sut.OrganizerName = "Tidal Collective";
+        sut.OrganizerWebsite = "http://organiser.example.invalid";
+
+        await sut.SubmitCommand.ExecuteAsync(null);
+
+        VerifyServiceCalledOnce();
+        Assert.False(sut.HasError);
+        Assert.NotNull(_sent?.Organizer);
+        Assert.Equal("http://organiser.example.invalid", _sent.Organizer.WebsiteUrl);
+    }
+
+    [Fact]
+    public async Task SubmitCommand_ReportsEventNameFirst_WhenWebsiteIsAlsoInvalid()
+    {
+        CreateEventViewModel sut = CreateValidSut();
+        sut.EventName = string.Empty;
+        sut.OrganizerWebsite = "venue.example";
+
+        await sut.SubmitCommand.ExecuteAsync(null);
+
+        Assert.Equal("Event name is required.", sut.ErrorMessage);
+        VerifyServiceNeverCalled();
+    }
+
+    [Fact]
+    public async Task SubmitCommand_ReportsVenueNameFirst_WhenWebsiteIsAlsoInvalid()
+    {
+        CreateEventViewModel sut = CreateValidSut();
+        sut.VenueName = string.Empty;
+        sut.OrganizerWebsite = "venue.example";
+
+        await sut.SubmitCommand.ExecuteAsync(null);
+
+        Assert.Equal("Venue name is required.", sut.ErrorMessage);
+        VerifyServiceNeverCalled();
+    }
+
+    [Fact]
+    public async Task SubmitCommand_ReportsDateRangeFirst_WhenWebsiteIsAlsoInvalid()
+    {
+        CreateEventViewModel sut = CreateValidSut();
+        sut.StartTime = TimeSpan.FromHours(10);
+        sut.EndTime = TimeSpan.FromHours(9);
+        sut.OrganizerWebsite = "venue.example";
+
+        await sut.SubmitCommand.ExecuteAsync(null);
+
+        Assert.Equal("End date/time must be after start date/time.", sut.ErrorMessage);
+        VerifyServiceNeverCalled();
+    }
+
+    [Fact]
+    public async Task SubmitCommand_Succeeds_AfterOrganizerWebsiteIsCorrected()
+    {
+        CreateEventViewModel sut = CreateValidSut();
+        sut.OrganizerName = "Tidal Collective";
+        sut.OrganizerWebsite = "venue.example";
+        await sut.SubmitCommand.ExecuteAsync(null);
+        Assert.Equal(WebsiteError, sut.ErrorMessage);
+        VerifyServiceNeverCalled();
+
+        sut.OrganizerWebsite = "https://organiser.example.invalid";
+        await sut.SubmitCommand.ExecuteAsync(null);
+
+        Assert.Equal(string.Empty, sut.ErrorMessage);
+        Assert.False(sut.HasError);
+        VerifyServiceCalledOnce();
+        Assert.Equal("https://organiser.example.invalid", _sent?.Organizer?.WebsiteUrl);
+    }
+
     // ── Request building ──────────────────────────────────────────────────────
 
     [Fact]
