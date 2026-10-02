@@ -36,6 +36,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<ISessionService, SessionService>();
         builder.Services.AddSingleton<IDashboardService, DashboardService>();
         builder.Services.AddSingleton<IEventsService, EventsService>();
+        builder.Services.AddSingleton<IEventsListPreferencesService, EventsListPreferencesService>();
 
         // ── Shell (Singleton) ─────────────────────────────────────────────────
         builder.Services.AddSingleton<AppShell>();

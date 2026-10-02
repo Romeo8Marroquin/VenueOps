@@ -9,6 +9,7 @@ public interface IEventsService
         int page, int pageSize,
         string? query = null, string? status = null,
         string sortBy = "startDateUtc", string sortDirection = "desc",
+        bool upcomingOnly = false,
         CancellationToken ct = default);
 
     Task<CreateEventResponse?> CreateEventAsync(

@@ -12,11 +12,13 @@ public sealed class EventsService(IHttpClientFactory factory) : IEventsService
         int page, int pageSize,
         string? query = null, string? status = null,
         string sortBy = "startDateUtc", string sortDirection = "desc",
+        bool upcomingOnly = false,
         CancellationToken ct = default)
     {
         var q = Uri.EscapeDataString(query ?? string.Empty);
         var s = string.IsNullOrWhiteSpace(status) ? "all" : status;
         var url = $"events/list?query={q}&status={s}&venueUuid=&page={page}&pageSize={pageSize}&sortBy={sortBy}&sortDirection={sortDirection}";
+        if (upcomingOnly) url += "&upcomingOnly=true";
         var response = await _http.GetAsync(url, ct);
         if (!response.IsSuccessStatusCode) return null;
         return await response.Content.ReadFromJsonAsync<PagedResult<RecentEvent>>(ct);
