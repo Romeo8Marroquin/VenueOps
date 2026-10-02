@@ -117,6 +117,78 @@ public class EventsServiceTests
         Assert.Null(await CreateSut(FakeApi.Respond(HttpStatusCode.InternalServerError)).GetEventsAsync(1, 10));
     }
 
+    // ── GetEventsAsync: upcomingOnly ──────────────────────────────────────────
+
+    [Fact]
+    public async Task GetEventsAsync_SendsUpcomingOnlyTrue_WhenRequested()
+    {
+        StubHttpMessageHandler handler = FakeApi.Respond(HttpStatusCode.OK, EventListJson);
+
+        await CreateSut(handler).GetEventsAsync(1, 10, upcomingOnly: true);
+
+        Assert.Equal(HttpMethod.Get, handler.LastRequest.Method);
+        Assert.StartsWith("events/list?", handler.LastRequest.RelativeUrl);
+        Assert.Contains("upcomingOnly=true", handler.LastRequest.Uri.Query.TrimStart('?').Split('&'));
+        Assert.Equal(
+            "events/list?query=&status=all&venueUuid=&page=1&pageSize=10&sortBy=startDateUtc&sortDirection=desc&upcomingOnly=true",
+            handler.LastRequest.RelativeUrl);
+    }
+
+    [Fact]
+    public async Task GetEventsAsync_OmitsUpcomingOnly_WhenParameterIsNotProvided()
+    {
+        StubHttpMessageHandler handler = FakeApi.Respond(HttpStatusCode.OK, EventListJson);
+
+        await CreateSut(handler).GetEventsAsync(1, 10);
+
+        Assert.DoesNotContain("upcomingOnly", handler.LastRequest.RelativeUrl);
+    }
+
+    [Fact]
+    public async Task GetEventsAsync_OmitsUpcomingOnly_WhenFalse()
+    {
+        StubHttpMessageHandler handler = FakeApi.Respond(HttpStatusCode.OK, EventListJson);
+
+        await CreateSut(handler).GetEventsAsync(1, 10, upcomingOnly: false);
+
+        Assert.DoesNotContain("upcomingOnly", handler.LastRequest.RelativeUrl);
+        Assert.Equal(
+            "events/list?query=&status=all&venueUuid=&page=1&pageSize=10&sortBy=startDateUtc&sortDirection=desc",
+            handler.LastRequest.RelativeUrl);
+    }
+
+    [Fact]
+    public async Task GetEventsAsync_WithUpcomingOnly_DeserializesPagedResult_OnSuccess()
+    {
+        PagedResult<RecentEvent>? result = await CreateSut(FakeApi.Respond(HttpStatusCode.OK, EventListJson))
+            .GetEventsAsync(1, 10, upcomingOnly: true);
+
+        Assert.NotNull(result);
+        Assert.Equal(2, result.Total);
+        Assert.False(result.HasMore);
+        Assert.Equal(["evt-010", "evt-011"], result.Items.Select(e => e.Id));
+    }
+
+    [Fact]
+    public async Task GetEventsAsync_WithUpcomingOnly_ReturnsNull_OnNonSuccessStatus()
+    {
+        Assert.Null(await CreateSut(FakeApi.Respond(HttpStatusCode.InternalServerError))
+            .GetEventsAsync(1, 10, upcomingOnly: true));
+    }
+
+    [Fact]
+    public async Task GetEventsAsync_SendsEveryFilterTogether_WhenUpcomingOnlyIsCombined()
+    {
+        StubHttpMessageHandler handler = FakeApi.Respond(HttpStatusCode.OK, EventListJson);
+
+        await CreateSut(handler).GetEventsAsync(3, 25, "fair/expo", "confirmed", "venueName", "asc", upcomingOnly: true);
+
+        Assert.Single(handler.Requests);
+        Assert.Equal(
+            "events/list?query=fair%2Fexpo&status=confirmed&venueUuid=&page=3&pageSize=25&sortBy=venueName&sortDirection=asc&upcomingOnly=true",
+            handler.LastRequest.RelativeUrl);
+    }
+
     // ── CreateEventAsync ──────────────────────────────────────────────────────
 
     [Fact]

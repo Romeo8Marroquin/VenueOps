@@ -11,6 +11,7 @@ public partial class EventsViewModel : BaseViewModel, IQueryAttributable
 {
     private readonly IEventsService     _eventsService;
     private readonly INavigationService _navigationService;
+    private readonly IEventsListPreferencesService _preferences;
 
     // Maps the label shown in the UI to the backend field name expected by the API
     private static readonly Dictionary<string, string> SortFieldMap = new()
@@ -53,13 +54,36 @@ public partial class EventsViewModel : BaseViewModel, IQueryAttributable
     public IReadOnlyList<string> SortByFields { get; } =
         ["Date", "Event", "Venue", "Attendees", "Booking Ref", "Status"];
 
+    // ── Upcoming only ─────────────────────────────────────────────────────
+    // Hides events whose end date has passed (the backend decides, not the client). The choice is
+    // kept in the shared preferences service, so a new view model starts with the same value.
+    // Not an [ObservableProperty]: the initial value is read from the service in the constructor
+    // and must not trigger a load.
+    private bool _upcomingOnly;
+
+    public bool UpcomingOnly
+    {
+        get => _upcomingOnly;
+        set
+        {
+            if (!SetProperty(ref _upcomingOnly, value)) return;
+            _preferences.UpcomingOnly = value;
+            _ = Events.LoadAsync();
+        }
+    }
+
     // ── Paginated events ──────────────────────────────────────────────────
     public PaginatedSection<RecentEvent> Events { get; }
 
-    public EventsViewModel(IEventsService eventsService, INavigationService navigationService)
+    public EventsViewModel(
+        IEventsService eventsService,
+        INavigationService navigationService,
+        IEventsListPreferencesService preferences)
     {
         _eventsService     = eventsService;
         _navigationService = navigationService;
+        _preferences       = preferences;
+        _upcomingOnly      = preferences.UpcomingOnly;
         Title = "Event List";
 
         Events = new PaginatedSection<RecentEvent>(
@@ -69,6 +93,7 @@ public partial class EventsViewModel : BaseViewModel, IQueryAttributable
                 EventsStatusFilter == "All" ? null : EventsStatusFilter.ToLowerInvariant(),
                 SortFieldMap.TryGetValue(SortByFilter, out var sf) ? sf : "startDateUtc",
                 SortAscending ? "asc" : "desc",
+                UpcomingOnly,
                 ct),
             pageSize: 10);
     }

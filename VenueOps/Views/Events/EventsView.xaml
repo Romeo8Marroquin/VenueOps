@@ -265,6 +265,19 @@
 
                         </Grid>
 
+                        <!-- Upcoming only — hides events that have already ended (both layouts) -->
+                        <HorizontalStackLayout Spacing="8" Margin="0,0,0,12">
+                            <Switch
+                                IsToggled="{Binding UpcomingOnly, Mode=TwoWay}"
+                                VerticalOptions="Center"
+                                SemanticProperties.Description="Upcoming only"
+                                AutomationId="UpcomingOnlySwitch"/>
+                            <Label
+                                Text="Upcoming only"
+                                Style="{StaticResource Caption}"
+                                VerticalOptions="Center"/>
+                        </HorizontalStackLayout>
+
                         <!-- Loading placeholder -->
                         <Grid
                             IsVisible="{Binding Events.IsLoading}"
