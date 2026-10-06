@@ -10,6 +10,8 @@ namespace VenueOps.ViewModels;
 
 public partial class CreateEventViewModel : BaseViewModel
 {
+    private static readonly TimeSpan MaxEventDuration = TimeSpan.FromDays(30);
+
     private readonly IEventsService _eventsService;
     private readonly IPopupService _popupService;
 
@@ -216,6 +218,12 @@ public partial class CreateEventViewModel : BaseViewModel
         if (endLocal <= startLocal)
         {
             ErrorMessage = "End date/time must be after start date/time.";
+            return false;
+        }
+
+        if (endLocal - startLocal > MaxEventDuration)
+        {
+            ErrorMessage = "An event cannot last longer than 30 days.";
             return false;
         }
 

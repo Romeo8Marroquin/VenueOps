@@ -161,6 +161,155 @@ public class CreateEventViewModelTests
         _eventsMock.Verify(e => e.CreateEventAsync(It.IsAny<CreateEventRequest>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
+    // ── Maximum event duration ────────────────────────────────────────────────
+
+    private const string DurationError = "An event cannot last longer than 30 days.";
+    private const string GenericError = "Something went wrong. Please try again.";
+
+    private static readonly DateTime LimitStart = new(2030, 6, 3, 9, 0, 0);
+
+    private void SetupServiceReturnsNull() =>
+        _eventsMock
+            .Setup(e => e.CreateEventAsync(It.IsAny<CreateEventRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((CreateEventResponse?)null);
+
+    private static void SetRange(CreateEventViewModel sut, DateTime start, DateTime end)
+    {
+        sut.StartDate = start.Date;
+        sut.StartTime = start.TimeOfDay;
+        sut.EndDate = end.Date;
+        sut.EndTime = end.TimeOfDay;
+    }
+
+    [Theory]
+    [InlineData(43201)]   // 30 days + 1 minute
+    [InlineData(44640)]   // 31 days
+    [InlineData(525600)]  // 365 days
+    public async Task SubmitCommand_RejectsEventLongerThan30Days(int minutesAfterStart)
+    {
+        SetupServiceReturnsNull();
+        CreateEventViewModel sut = CreateValidSut();
+        SetRange(sut, LimitStart, LimitStart.AddMinutes(minutesAfterStart));
+
+        await sut.SubmitCommand.ExecuteAsync(null);
+
+        Assert.Equal(DurationError, sut.ErrorMessage);
+        Assert.True(sut.HasError);
+        Assert.False(sut.IsBusy);
+        VerifyServiceNeverCalled();
+    }
+
+    [Theory]
+    [InlineData(2030, 6, 3)]    // no daylight-saving change in most zones
+    [InlineData(2030, 3, 1)]    // spans the spring clock change in many zones
+    [InlineData(2030, 10, 15)]  // spans the autumn clock change in many zones
+    public async Task SubmitCommand_AcceptsEventOfExactly30Days(int year, int month, int day)
+    {
+        SetupServiceReturnsNull();
+        CreateEventViewModel sut = CreateValidSut();
+        DateTime start = new(year, month, day, 9, 0, 0);
+        SetRange(sut, start, start.AddDays(30));
+
+        await sut.SubmitCommand.ExecuteAsync(null);
+
+        VerifyServiceCalledOnce();
+        Assert.NotEqual(DurationError, sut.ErrorMessage);
+        Assert.Equal(GenericError, sut.ErrorMessage);
+    }
+
+    [Fact]
+    public async Task SubmitCommand_AcceptsEventJustUnder30Days()
+    {
+        SetupServiceReturnsNull();
+        CreateEventViewModel sut = CreateValidSut();
+        SetRange(sut, LimitStart, LimitStart.AddDays(30).AddMinutes(-1));
+
+        await sut.SubmitCommand.ExecuteAsync(null);
+
+        VerifyServiceCalledOnce();
+        Assert.NotEqual(DurationError, sut.ErrorMessage);
+        Assert.Equal(GenericError, sut.ErrorMessage);
+    }
+
+    [Fact]
+    public async Task SubmitCommand_ReportsEventNameFirst_WhenEventIsAlsoLongerThan30Days()
+    {
+        CreateEventViewModel sut = CreateValidSut();
+        sut.EventName = string.Empty;
+        SetRange(sut, LimitStart, LimitStart.AddDays(45));
+
+        await sut.SubmitCommand.ExecuteAsync(null);
+
+        Assert.Equal("Event name is required.", sut.ErrorMessage);
+        VerifyServiceNeverCalled();
+    }
+
+    [Fact]
+    public async Task SubmitCommand_ReportsVenueNameFirst_WhenEventIsAlsoLongerThan30Days()
+    {
+        CreateEventViewModel sut = CreateValidSut();
+        sut.VenueName = string.Empty;
+        SetRange(sut, LimitStart, LimitStart.AddDays(45));
+
+        await sut.SubmitCommand.ExecuteAsync(null);
+
+        Assert.Equal("Venue name is required.", sut.ErrorMessage);
+        VerifyServiceNeverCalled();
+    }
+
+    [Fact]
+    public async Task SubmitCommand_ReportsEndAfterStartBeforeDurationLimit()
+    {
+        CreateEventViewModel sut = CreateValidSut();
+        SetRange(sut, LimitStart, LimitStart);
+
+        await sut.SubmitCommand.ExecuteAsync(null);
+
+        Assert.Equal("End date/time must be after start date/time.", sut.ErrorMessage);
+        Assert.NotEqual(DurationError, sut.ErrorMessage);
+        VerifyServiceNeverCalled();
+    }
+
+    [Fact]
+    public async Task SubmitCommand_ReportsDurationLimitBeforeAttendees_WhenBothAreInvalid()
+    {
+        CreateEventViewModel sut = CreateValidSut();
+        sut.ExpectedAttendeesText = "abc";
+        SetRange(sut, LimitStart, LimitStart.AddDays(45));
+
+        await sut.SubmitCommand.ExecuteAsync(null);
+
+        Assert.Equal(DurationError, sut.ErrorMessage);
+        VerifyServiceNeverCalled();
+    }
+
+    [Fact]
+    public async Task SubmitCommand_ReportsAttendees_WhenEventIsWithin30DaysAndAttendeesAreInvalid()
+    {
+        CreateEventViewModel sut = CreateValidSut();
+        sut.ExpectedAttendeesText = "abc";
+        SetRange(sut, LimitStart, LimitStart.AddDays(30));
+
+        await sut.SubmitCommand.ExecuteAsync(null);
+
+        Assert.Equal("Expected attendees must be a non-negative number.", sut.ErrorMessage);
+        VerifyServiceNeverCalled();
+    }
+
+    [Fact]
+    public async Task SubmitCommand_DoesNotApplyDurationLimit_ToOrdinaryEvent()
+    {
+        SetupServiceReturnsNull();
+        CreateEventViewModel sut = CreateValidSut();
+        SetRange(sut, LimitStart, LimitStart.AddHours(4));
+
+        await sut.SubmitCommand.ExecuteAsync(null);
+
+        VerifyServiceCalledOnce();
+        Assert.NotEqual(DurationError, sut.ErrorMessage);
+        Assert.Equal(GenericError, sut.ErrorMessage);
+    }
+
     // ── Organizer website validation ──────────────────────────────────────────
 
     private const string WebsiteError = "Organizer website must be a full http or https address.";
