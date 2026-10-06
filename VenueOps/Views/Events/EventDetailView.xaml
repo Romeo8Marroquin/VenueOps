@@ -298,9 +298,9 @@
                                         <Label Grid.Column="0" Text="{Binding AttendeesLabel}" Style="{StaticResource DetailKey}"/>
                                         <Label Grid.Column="1" Text="{Binding AttendeesDisplay}" Style="{StaticResource DetailValue}"/>
                                     </Grid>
-                                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
-                                        <Label Grid.Column="0" Text="Booking Ref" Style="{StaticResource DetailKey}"/>
-                                        <Label Grid.Column="1" Text="{Binding Detail.BookingReference}" Style="{StaticResource DetailValue}"/>
+                                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12" IsVisible="{Binding HasBookingReference}">
+                                        <Label Grid.Column="0" Text="Booking Ref" Style="{StaticResource DetailKey}" IsVisible="{Binding HasBookingReference}"/>
+                                        <Label Grid.Column="1" Text="{Binding BookingReferenceDisplay}" Style="{StaticResource DetailValue}" IsVisible="{Binding HasBookingReference}"/>
                                     </Grid>
                                 </VerticalStackLayout>
                             </Border>
@@ -583,10 +583,10 @@
                                 </VerticalStackLayout>
                             </Border>
 
-                            <Border Grid.Column="3" Style="{StaticResource StatTile}">
+                            <Border Grid.Column="3" Style="{StaticResource StatTile}" IsVisible="{Binding HasBookingReference}">
                                 <VerticalStackLayout Spacing="0" VerticalOptions="Center">
-                                    <Label Text="BOOKING REF" Style="{StaticResource TileKey}"/>
-                                    <Label Text="{Binding Detail.BookingReference}" Style="{StaticResource TileValue}" MaxLines="2"/>
+                                    <Label Text="BOOKING REF" Style="{StaticResource TileKey}" IsVisible="{Binding HasBookingReference}"/>
+                                    <Label Text="{Binding BookingReferenceDisplay}" Style="{StaticResource TileValue}" MaxLines="2" IsVisible="{Binding HasBookingReference}"/>
                                 </VerticalStackLayout>
                             </Border>
 
