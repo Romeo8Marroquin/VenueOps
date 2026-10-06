@@ -265,18 +265,28 @@
 
                         </Grid>
 
-                        <!-- Upcoming only — hides events that have already ended (both layouts) -->
-                        <HorizontalStackLayout Spacing="8" Margin="0,0,0,12">
-                            <Switch
-                                IsToggled="{Binding UpcomingOnly, Mode=TwoWay}"
+                        <!-- Upcoming only — hides events that have already ended (both layouts)
+                             Copy as CSV — copies the listed events; disabled while the list is empty -->
+                        <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,12">
+                            <HorizontalStackLayout Grid.Column="0" Spacing="8" VerticalOptions="Center">
+                                <Switch
+                                    IsToggled="{Binding UpcomingOnly, Mode=TwoWay}"
+                                    VerticalOptions="Center"
+                                    SemanticProperties.Description="Upcoming only"
+                                    AutomationId="UpcomingOnlySwitch"/>
+                                <Label
+                                    Text="Upcoming only"
+                                    Style="{StaticResource Caption}"
+                                    VerticalOptions="Center"/>
+                            </HorizontalStackLayout>
+                            <Button
+                                Grid.Column="1"
+                                Text="Copy as CSV"
+                                Command="{Binding CopyAsCsvCommand}"
+                                Style="{StaticResource PageNavButton}"
                                 VerticalOptions="Center"
-                                SemanticProperties.Description="Upcoming only"
-                                AutomationId="UpcomingOnlySwitch"/>
-                            <Label
-                                Text="Upcoming only"
-                                Style="{StaticResource Caption}"
-                                VerticalOptions="Center"/>
-                        </HorizontalStackLayout>
+                                AutomationId="CopyAsCsvButton"/>
+                        </Grid>
 
                         <!-- Loading placeholder -->
                         <Grid

@@ -16,6 +16,8 @@
                                           supplied from another assembly. Out of unit-test scope.
     **/VenueOps/Services/DialogService.cs      Thin wrapper over Application.Current page dialogs.
     **/VenueOps/Services/NavigationService.cs  Thin wrapper over Application.Current / Shell.Current.
+    **/VenueOps/Services/ClipboardService.cs   Thin wrapper that only forwards to the platform clipboard
+                                          (Clipboard.Default); needs a running app.
     **/obj/**                             Build-generated sources (XAML source generator output, etc.).
 
   ExcludeByAttribute: GeneratedCodeAttribute covers source-generated members
@@ -28,7 +30,7 @@
         <Configuration>
           <Format>cobertura</Format>
           <Include>[VenueOps]*</Include>
-          <ExcludeByFile>**/VenueOps/Views/**,**/VenueOps/Platforms/**,**/VenueOps/App.xaml.cs,**/VenueOps/AppShell.xaml.cs,**/VenueOps/MauiProgram.cs,**/VenueOps/Config/ApiConfig.cs,**/VenueOps/Services/DialogService.cs,**/VenueOps/Services/NavigationService.cs,**/obj/**</ExcludeByFile>
+          <ExcludeByFile>**/VenueOps/Views/**,**/VenueOps/Platforms/**,**/VenueOps/App.xaml.cs,**/VenueOps/AppShell.xaml.cs,**/VenueOps/MauiProgram.cs,**/VenueOps/Config/ApiConfig.cs,**/VenueOps/Services/DialogService.cs,**/VenueOps/Services/NavigationService.cs,**/VenueOps/Services/ClipboardService.cs,**/obj/**</ExcludeByFile>
           <ExcludeByAttribute>GeneratedCodeAttribute</ExcludeByAttribute>
         </Configuration>
       </DataCollector>
