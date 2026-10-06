@@ -46,6 +46,8 @@ public partial class EventDetailViewModel : BaseViewModel, IQueryAttributable
     [NotifyPropertyChangedFor(nameof(AttendeesDisplay))]
     [NotifyPropertyChangedFor(nameof(GalleryImages))]
     [NotifyPropertyChangedFor(nameof(HasGalleryImages))]
+    [NotifyPropertyChangedFor(nameof(BookingReferenceDisplay))]
+    [NotifyPropertyChangedFor(nameof(HasBookingReference))]
     public partial EventDetail? Detail { get; set; }
 
     // ── Computed ──────────────────────────────────────────────────────────
@@ -95,6 +97,33 @@ public partial class EventDetailViewModel : BaseViewModel, IQueryAttributable
     }
 
     public bool HasDuration => DurationDisplay.Length > 0;
+
+    /// <summary>
+    /// The booking reference as shown on screen: upper case, in hyphen-separated groups of
+    /// four characters, e.g. "VNO7-K2X9-Q4". Empty when no event is loaded or the reference
+    /// has nothing left once spaces and hyphens are removed. Display only: the stored
+    /// value is not changed.
+    /// </summary>
+    public string BookingReferenceDisplay => FormatBookingReference(Detail?.BookingReference);
+
+    public bool HasBookingReference => BookingReferenceDisplay.Length > 0;
+
+    // Strips spaces and hyphens, upper-cases what is left, then groups it in fours from the
+    // start (the last group may be shorter).
+    private static string FormatBookingReference(string? reference)
+    {
+        if (reference is null) return string.Empty;
+
+        string compact = string.Concat(reference.Where(c => c != ' ' && c != '-')).ToUpperInvariant();
+        if (compact.Length == 0) return string.Empty;
+
+        const int groupSize = 4;
+        var groups = new List<string>((compact.Length + groupSize - 1) / groupSize);
+        for (int i = 0; i < compact.Length; i += groupSize)
+            groups.Add(compact.Substring(i, Math.Min(groupSize, compact.Length - i)));
+
+        return string.Join("-", groups);
+    }
 
     // Under one day: hours and minutes; otherwise days and hours. Any remainder below the
     // last displayed unit is truncated, and a zero last unit is omitted.

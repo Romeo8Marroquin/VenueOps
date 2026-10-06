@@ -408,6 +408,164 @@ public class EventDetailViewModelTests
         Assert.False(sut.HasDuration);
     }
 
+    // ── Booking reference ─────────────────────────────────────────────────────
+
+    private EventDetailViewModel CreateSutWithBookingReference(string reference)
+    {
+        EventDetail detail = CreateDetail();
+        detail.BookingReference = reference;
+        return CreateLoadedSut(detail);
+    }
+
+    [Fact]
+    public void BookingReferenceDisplay_ShowsUpperCaseGroupsOfFour_AndHasBookingReferenceIsTrue()
+    {
+        EventDetailViewModel sut = CreateSutWithBookingReference("vno7k2x9q4");
+
+        Assert.Equal("VNO7-K2X9-Q4", sut.BookingReferenceDisplay);
+        Assert.True(sut.HasBookingReference);
+    }
+
+    [Theory]
+    [InlineData("ab12", "AB12")]
+    [InlineData("ab12cd34", "AB12-CD34")]
+    [InlineData("ab12c", "AB12-C")]
+    [InlineData("a", "A")]
+    [InlineData("Vno7K2x9q4", "VNO7-K2X9-Q4")]
+    public void BookingReferenceDisplay_GroupsFromTheStartAndUpperCases(string reference, string expected)
+    {
+        EventDetailViewModel sut = CreateSutWithBookingReference(reference);
+
+        Assert.Equal(expected, sut.BookingReferenceDisplay);
+        Assert.True(sut.HasBookingReference);
+    }
+
+    [Theory]
+    [InlineData("vno7 k2x9-q4")]
+    [InlineData(" vno7--k2x9  q4 ")]
+    [InlineData("VNO7-K2X9-Q4")]
+    public void BookingReferenceDisplay_RemovesSpacesAndHyphensBeforeGrouping(string reference)
+    {
+        EventDetailViewModel sut = CreateSutWithBookingReference(reference);
+
+        Assert.Equal("VNO7-K2X9-Q4", sut.BookingReferenceDisplay);
+        Assert.True(sut.HasBookingReference);
+    }
+
+    [Fact]
+    public void BookingReferenceDisplay_IsEmpty_WhenNoDetailIsLoaded()
+    {
+        EventDetailViewModel sut = CreateSut();
+
+        Assert.Equal(string.Empty, sut.BookingReferenceDisplay);
+        Assert.False(sut.HasBookingReference);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("-")]
+    [InlineData(" - - ")]
+    public void BookingReferenceDisplay_IsEmpty_WhenReferenceHasNothingButSeparators(string reference)
+    {
+        EventDetailViewModel sut = CreateSutWithBookingReference(reference);
+
+        Assert.Equal(string.Empty, sut.BookingReferenceDisplay);
+        Assert.False(sut.HasBookingReference);
+    }
+
+    [Fact]
+    public void BookingReferenceDisplay_IsEmpty_WhenReferenceIsNull()
+    {
+        // Mirrors a payload where the API sends null for the reference.
+        EventDetail detail = CreateDetail();
+        detail.BookingReference = null!;
+        EventDetailViewModel sut = CreateLoadedSut(detail);
+
+        Assert.Equal(string.Empty, sut.BookingReferenceDisplay);
+        Assert.False(sut.HasBookingReference);
+    }
+
+    [Fact]
+    public void Detail_RaisesBookingReferenceNotifications()
+    {
+        EventDetailViewModel sut = CreateSut();
+        List<string?> raised = [];
+        sut.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+
+        sut.Detail = CreateDetail();
+
+        Assert.Contains(nameof(EventDetailViewModel.BookingReferenceDisplay), raised);
+        Assert.Contains(nameof(EventDetailViewModel.HasBookingReference), raised);
+    }
+
+    [Fact]
+    public void BookingReferenceDisplay_FollowsDetail_WhenReplacedOrCleared()
+    {
+        EventDetailViewModel sut = CreateSutWithBookingReference("vno7k2x9q4");
+        List<string?> raised = [];
+        sut.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+
+        EventDetail other = CreateDetail();
+        other.BookingReference = "ab12 cd34 e";
+        sut.Detail = other;
+
+        Assert.Equal("AB12-CD34-E", sut.BookingReferenceDisplay);
+        Assert.True(sut.HasBookingReference);
+        Assert.Contains(nameof(EventDetailViewModel.BookingReferenceDisplay), raised);
+
+        raised.Clear();
+        sut.Detail = null;
+
+        Assert.Equal(string.Empty, sut.BookingReferenceDisplay);
+        Assert.False(sut.HasBookingReference);
+        Assert.Contains(nameof(EventDetailViewModel.BookingReferenceDisplay), raised);
+        Assert.Contains(nameof(EventDetailViewModel.HasBookingReference), raised);
+    }
+
+    [Fact]
+    public async Task BookingReference_IsShownFormatted_AfterInitializeAsyncLoadsAnEvent()
+    {
+        EventDetail detail = CreateDetail();
+        detail.BookingReference = "vno7k2x9q4";
+        SetupDetail(detail);
+        EventDetailViewModel sut = CreateSut();
+        sut.ApplyQueryAttributes(new Dictionary<string, object> { ["id"] = "evt-500" });
+
+        await sut.InitializeAsync();
+
+        Assert.Equal("VNO7-K2X9-Q4", sut.BookingReferenceDisplay);
+        Assert.True(sut.HasBookingReference);
+    }
+
+    [Fact]
+    public async Task BookingReference_IsHidden_WhenServiceReturnsNull()
+    {
+        SetupDetail(null);
+        EventDetailViewModel sut = CreateSutWithBookingReference("vno7k2x9q4");
+        sut.ApplyQueryAttributes(new Dictionary<string, object> { ["id"] = "evt-missing" });
+
+        await sut.InitializeAsync();
+
+        Assert.Equal(string.Empty, sut.BookingReferenceDisplay);
+        Assert.False(sut.HasBookingReference);
+    }
+
+    [Fact]
+    public async Task BookingReference_IsHidden_WhenServiceThrows()
+    {
+        _eventsMock
+            .Setup(e => e.GetEventDetailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new HttpRequestException("offline"));
+        EventDetailViewModel sut = CreateSutWithBookingReference("vno7k2x9q4");
+        sut.ApplyQueryAttributes(new Dictionary<string, object> { ["id"] = "evt-500" });
+
+        await sut.InitializeAsync();
+
+        Assert.Equal(string.Empty, sut.BookingReferenceDisplay);
+        Assert.False(sut.HasBookingReference);
+    }
+
     // ── Attendees ─────────────────────────────────────────────────────────────
 
     [Theory]
