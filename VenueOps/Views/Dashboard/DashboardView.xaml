@@ -489,11 +489,34 @@
                                                         CommandParameter="{Binding}"/>
                                                 </Grid.GestureRecognizers>
 
-                                                <Label
-                                                    Grid.Row="0" Grid.Column="0"
-                                                    Text="{Binding EventName}"
-                                                    Style="{StaticResource EventTitle}"
-                                                    LineBreakMode="TailTruncation"/>
+                                                <!-- Event name + 'Important' badge (badge only shown for important events) -->
+                                                <Grid Grid.Row="0" Grid.Column="0" ColumnDefinitions="*,Auto">
+                                                    <Label
+                                                        Grid.Row="0" Grid.Column="0"
+                                                        Text="{Binding EventName}"
+                                                        Style="{StaticResource EventTitle}"
+                                                        LineBreakMode="TailTruncation"/>
+
+                                                    <Border
+                                                        Grid.Column="1"
+                                                        IsVisible="{Binding IsImportant}"
+                                                        StrokeShape="RoundRectangle 4"
+                                                        StrokeThickness="0"
+                                                        Padding="6,3"
+                                                        Margin="6,0,0,0"
+                                                        VerticalOptions="Center"
+                                                        BackgroundColor="{AppThemeBinding
+                                                            Light={StaticResource BrandDark},
+                                                            Dark={StaticResource BrandMid}}">
+                                                        <Label
+                                                            Text="Important"
+                                                            FontFamily="OpenSansSemibold"
+                                                            FontSize="11"
+                                                            TextColor="{AppThemeBinding
+                                                                Light={StaticResource SurfaceLight},
+                                                                Dark={StaticResource TextPrimaryDark}}"/>
+                                                    </Border>
+                                                </Grid>
 
                                                 <Border
                                                     Grid.Row="0" Grid.Column="1"
@@ -584,12 +607,35 @@
                                                             CommandParameter="{Binding}"/>
                                                     </Grid.GestureRecognizers>
 
-                                                    <Label
-                                                        Grid.Column="0"
-                                                        Text="{Binding EventName}"
-                                                        Style="{StaticResource EventTitle}"
-                                                        LineBreakMode="TailTruncation"
-                                                        VerticalOptions="Center"/>
+                                                    <!-- Event name + 'Important' badge (badge only shown for important events) -->
+                                                    <Grid Grid.Column="0" ColumnDefinitions="*,Auto" VerticalOptions="Center">
+                                                        <Label
+                                                            Grid.Column="0"
+                                                            Text="{Binding EventName}"
+                                                            Style="{StaticResource EventTitle}"
+                                                            LineBreakMode="TailTruncation"
+                                                            VerticalOptions="Center"/>
+
+                                                        <Border
+                                                            Grid.Column="1"
+                                                            IsVisible="{Binding IsImportant}"
+                                                            StrokeShape="RoundRectangle 4"
+                                                            StrokeThickness="0"
+                                                            Padding="6,3"
+                                                            Margin="6,0,0,0"
+                                                            VerticalOptions="Center"
+                                                            BackgroundColor="{AppThemeBinding
+                                                                Light={StaticResource BrandDark},
+                                                                Dark={StaticResource BrandMid}}">
+                                                            <Label
+                                                                Text="Important"
+                                                                FontFamily="OpenSansSemibold"
+                                                                FontSize="11"
+                                                                TextColor="{AppThemeBinding
+                                                                    Light={StaticResource SurfaceLight},
+                                                                    Dark={StaticResource TextPrimaryDark}}"/>
+                                                        </Border>
+                                                    </Grid>
 
                                                     <Label
                                                         Grid.Column="1"
