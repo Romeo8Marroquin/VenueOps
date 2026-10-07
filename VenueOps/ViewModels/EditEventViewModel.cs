@@ -10,6 +10,8 @@ namespace VenueOps.ViewModels;
 
 public partial class EditEventViewModel : BaseViewModel
 {
+    private const int MaxEventNameLength = 80;
+
     private readonly IEventsService _eventsService;
     private readonly IPopupService  _popupService;
     private string _eventId = string.Empty;
@@ -251,6 +253,11 @@ public partial class EditEventViewModel : BaseViewModel
         if (string.IsNullOrWhiteSpace(EventName))
         {
             ErrorMessage = "Event name is required.";
+            return false;
+        }
+        if (EventName.Trim().Length > MaxEventNameLength)
+        {
+            ErrorMessage = "Event name must be 80 characters or fewer.";
             return false;
         }
         if (string.IsNullOrWhiteSpace(VenueName))
