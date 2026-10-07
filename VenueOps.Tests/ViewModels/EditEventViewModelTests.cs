@@ -240,6 +240,163 @@ public class EditEventViewModelTests
         _eventsMock.Verify(e => e.UpdateEventAsync(It.IsAny<UpdateEventRequest>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
+    // ── Event name length ─────────────────────────────────────────────────────
+
+    private const string NameTooLongMessage = "Event name must be 80 characters or fewer.";
+
+    // The service returns null so the post-save code that needs Application.Current and Shell.Current is not reached.
+    private void SetupUpdateReturnsNull() =>
+        _eventsMock
+            .Setup(e => e.UpdateEventAsync(It.IsAny<UpdateEventRequest>(), It.IsAny<CancellationToken>()))
+            .Callback<UpdateEventRequest, CancellationToken>((r, _) => _sent = r)
+            .ReturnsAsync((EventDetail?)null);
+
+    private void VerifyUpdateNeverCalled() =>
+        _eventsMock.Verify(e => e.UpdateEventAsync(It.IsAny<UpdateEventRequest>(), It.IsAny<CancellationToken>()), Times.Never);
+
+    private void VerifyUpdateCalledOnceWithName(string expectedName)
+    {
+        _eventsMock.Verify(e => e.UpdateEventAsync(It.IsAny<UpdateEventRequest>(), It.IsAny<CancellationToken>()), Times.Once);
+        Assert.NotNull(_sent);
+        Assert.Equal(expectedName, _sent.EventName);
+    }
+
+    [Fact]
+    public async Task SubmitCommand_RejectsEventNameOver80Characters()
+    {
+        EditEventViewModel sut = CreateLoadedSut();
+        sut.EventName = new string('a', 81);
+
+        await sut.SubmitCommand.ExecuteAsync(null);
+
+        Assert.Equal(NameTooLongMessage, sut.ErrorMessage);
+        Assert.True(sut.HasError);
+        VerifyUpdateNeverCalled();
+    }
+
+    [Fact]
+    public async Task SubmitCommand_RejectsEventNameOver80Characters_WhenTrimmedAndPaddedWithSpaces()
+    {
+        EditEventViewModel sut = CreateLoadedSut();
+        sut.EventName = "   " + new string('b', 81) + "  ";
+
+        await sut.SubmitCommand.ExecuteAsync(null);
+
+        Assert.Equal(NameTooLongMessage, sut.ErrorMessage);
+        Assert.True(sut.HasError);
+        VerifyUpdateNeverCalled();
+    }
+
+    [Fact]
+    public async Task SubmitCommand_SavesEventNameOfExactly80Characters()
+    {
+        SetupUpdateReturnsNull();
+        string name = new('c', 80);
+        EditEventViewModel sut = CreateLoadedSut();
+        sut.EventName = name;
+
+        await sut.SubmitCommand.ExecuteAsync(null);
+
+        VerifyUpdateCalledOnceWithName(name);
+        Assert.NotEqual(NameTooLongMessage, sut.ErrorMessage);
+    }
+
+    [Fact]
+    public async Task SubmitCommand_IgnoresSpacesAroundEventNameWhenCountingLength()
+    {
+        SetupUpdateReturnsNull();
+        string name = new('d', 80);
+        EditEventViewModel sut = CreateLoadedSut();
+        sut.EventName = "    " + name + "   ";
+
+        await sut.SubmitCommand.ExecuteAsync(null);
+
+        VerifyUpdateCalledOnceWithName(name);
+        Assert.NotEqual(NameTooLongMessage, sut.ErrorMessage);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task SubmitCommand_ShowsRequiredMessageRatherThanLengthMessage_WhenNameIsBlank(string eventName)
+    {
+        EditEventViewModel sut = CreateLoadedSut();
+        sut.EventName = eventName;
+
+        await sut.SubmitCommand.ExecuteAsync(null);
+
+        Assert.Equal("Event name is required.", sut.ErrorMessage);
+        Assert.NotEqual(NameTooLongMessage, sut.ErrorMessage);
+        VerifyUpdateNeverCalled();
+    }
+
+    [Fact]
+    public async Task SubmitCommand_ChecksEventNameLengthBeforeVenueName()
+    {
+        EditEventViewModel sut = CreateLoadedSut();
+        sut.EventName = new string('e', 81);
+        sut.VenueName = string.Empty;
+
+        await sut.SubmitCommand.ExecuteAsync(null);
+
+        Assert.Equal(NameTooLongMessage, sut.ErrorMessage);
+        VerifyUpdateNeverCalled();
+    }
+
+    [Fact]
+    public async Task SubmitCommand_KeepsVenueNameCheck_WhenEventNameIs80Characters()
+    {
+        EditEventViewModel sut = CreateLoadedSut();
+        sut.EventName = new string('f', 80);
+        sut.VenueName = string.Empty;
+
+        await sut.SubmitCommand.ExecuteAsync(null);
+
+        Assert.Equal("Venue name is required.", sut.ErrorMessage);
+        VerifyUpdateNeverCalled();
+    }
+
+    [Fact]
+    public async Task SubmitCommand_KeepsEndAfterStartCheck_WhenEventNameIs80Characters()
+    {
+        EditEventViewModel sut = CreateLoadedSut();
+        sut.EventName = new string('g', 80);
+        sut.EndDate = sut.StartDate.AddDays(-1);
+
+        await sut.SubmitCommand.ExecuteAsync(null);
+
+        Assert.Equal("End date/time must be after start date/time.", sut.ErrorMessage);
+        VerifyUpdateNeverCalled();
+    }
+
+    [Theory]
+    [InlineData(0, "Event name is required.", false)]
+    [InlineData(1, null, true)]
+    [InlineData(79, null, true)]
+    [InlineData(80, null, true)]
+    [InlineData(81, NameTooLongMessage, false)]
+    [InlineData(200, NameTooLongMessage, false)]
+    public async Task SubmitCommand_AppliesEventNameLengthLimit(int trimmedLength, string? expectedError, bool expectedSaved)
+    {
+        SetupUpdateReturnsNull();
+        string name = new('h', trimmedLength);
+        EditEventViewModel sut = CreateLoadedSut();
+        sut.EventName = $"  {name}  ";
+
+        await sut.SubmitCommand.ExecuteAsync(null);
+
+        if (expectedSaved)
+        {
+            VerifyUpdateCalledOnceWithName(name);
+            Assert.NotEqual(NameTooLongMessage, sut.ErrorMessage);
+        }
+        else
+        {
+            VerifyUpdateNeverCalled();
+            Assert.Equal(expectedError, sut.ErrorMessage);
+        }
+    }
+
     // ── Request building ──────────────────────────────────────────────────────
 
     [Fact]
