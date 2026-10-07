@@ -46,6 +46,7 @@ public partial class EventDetailViewModel : BaseViewModel, IQueryAttributable
     [NotifyPropertyChangedFor(nameof(AttendeesDisplay))]
     [NotifyPropertyChangedFor(nameof(GalleryImages))]
     [NotifyPropertyChangedFor(nameof(HasGalleryImages))]
+    [NotifyPropertyChangedFor(nameof(GalleryHeadingText))]
     [NotifyPropertyChangedFor(nameof(BookingReferenceDisplay))]
     [NotifyPropertyChangedFor(nameof(HasBookingReference))]
     public partial EventDetail? Detail { get; set; }
@@ -68,6 +69,16 @@ public partial class EventDetailViewModel : BaseViewModel, IQueryAttributable
             ? (IReadOnlyList<EventImage>)Detail.Images.Skip(1).ToList()
             : Array.Empty<EventImage>();
     public bool HasGalleryImages => GalleryImages.Count > 0;
+
+    /// <summary>
+    /// The gallery heading, e.g. "Gallery (3)": the number of images the gallery shows (every
+    /// image after the hero). Empty when the gallery shows no images. Formatted with the
+    /// invariant culture, so it does not depend on the device culture.
+    /// </summary>
+    public string GalleryHeadingText =>
+        HasGalleryImages
+            ? FormattableString.Invariant($"Gallery ({GalleryImages.Count})")
+            : string.Empty;
 
     public string DateRangeDisplay
     {

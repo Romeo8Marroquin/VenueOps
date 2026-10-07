@@ -566,6 +566,129 @@ public class EventDetailViewModelTests
         Assert.False(sut.HasBookingReference);
     }
 
+    // ── Gallery heading ───────────────────────────────────────────────────────
+
+    private static EventDetail CreateDetailWithImages(int imageCount)
+    {
+        EventDetail detail = CreateDetail();
+        detail.Images = Enumerable.Range(0, imageCount)
+            .Select(i => new EventImage { Url = $"https://images.example.invalid/img{i}.jpg" })
+            .ToList();
+        return detail;
+    }
+
+    [Fact]
+    public void GalleryHeadingText_ShowsTheGalleryCount_NotCountingTheHeroImage()
+    {
+        EventDetailViewModel sut = CreateLoadedSut(CreateDetailWithImages(4));
+
+        Assert.Equal("Gallery (3)", sut.GalleryHeadingText);
+        Assert.Equal(3, sut.GalleryImages.Count);
+        Assert.True(sut.HasGalleryImages);
+    }
+
+    [Fact]
+    public void GalleryHeadingText_ShowsOne_ForAGalleryOfOnePhoto()
+    {
+        EventDetailViewModel sut = CreateLoadedSut(CreateDetailWithImages(2));
+
+        Assert.Equal("Gallery (1)", sut.GalleryHeadingText);
+        Assert.True(sut.HasGalleryImages);
+    }
+
+    [Fact]
+    public void GalleryHeadingText_IsEmptyAndHidden_WhenNoEventIsLoaded()
+    {
+        EventDetailViewModel sut = CreateSut();
+
+        Assert.Equal(string.Empty, sut.GalleryHeadingText);
+        Assert.False(sut.HasGalleryImages);
+    }
+
+    [Fact]
+    public void GalleryHeadingText_IsEmptyAndHidden_WhenTheEventHasOnlyTheHeroImage()
+    {
+        EventDetailViewModel sut = CreateLoadedSut(CreateDetailWithImages(1));
+
+        Assert.Equal(string.Empty, sut.GalleryHeadingText);
+        Assert.False(sut.HasGalleryImages);
+    }
+
+    [Fact]
+    public void GalleryHeadingText_IsEmptyAndHidden_WhenTheEventHasNoImages()
+    {
+        EventDetailViewModel sut = CreateLoadedSut(CreateDetailWithImages(0));
+
+        Assert.Equal(string.Empty, sut.GalleryHeadingText);
+        Assert.False(sut.HasGalleryImages);
+    }
+
+    [Fact]
+    public void Detail_RaisesGalleryHeadingTextNotification_AndTheValueFollowsTheNewEvent()
+    {
+        EventDetailViewModel sut = CreateLoadedSut(CreateDetailWithImages(2));
+        List<string?> raised = [];
+        sut.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+
+        sut.Detail = CreateDetailWithImages(5);
+
+        Assert.Contains(nameof(EventDetailViewModel.GalleryHeadingText), raised);
+        Assert.Equal("Gallery (4)", sut.GalleryHeadingText);
+
+        raised.Clear();
+        sut.Detail = null;
+
+        Assert.Contains(nameof(EventDetailViewModel.GalleryHeadingText), raised);
+        Assert.Equal(string.Empty, sut.GalleryHeadingText);
+    }
+
+    [Fact]
+    public async Task GalleryHeadingText_IsRefreshed_WhenInitializeAsyncLoadsAndReloadsAnEvent()
+    {
+        SetupDetail(CreateDetailWithImages(4));
+        EventDetailViewModel sut = CreateSut();
+        sut.ApplyQueryAttributes(new Dictionary<string, object> { ["id"] = "evt-500" });
+
+        await sut.InitializeAsync();
+
+        Assert.Equal("Gallery (3)", sut.GalleryHeadingText);
+
+        SetupDetail(CreateDetailWithImages(0));
+
+        await sut.InitializeAsync();
+
+        Assert.Equal(string.Empty, sut.GalleryHeadingText);
+        Assert.False(sut.HasGalleryImages);
+    }
+
+    [Fact]
+    public async Task GalleryHeadingText_IsEmpty_WhenServiceReturnsNull()
+    {
+        SetupDetail(null);
+        EventDetailViewModel sut = CreateLoadedSut(CreateDetailWithImages(4));
+        sut.ApplyQueryAttributes(new Dictionary<string, object> { ["id"] = "evt-missing" });
+
+        await sut.InitializeAsync();
+
+        Assert.Equal(string.Empty, sut.GalleryHeadingText);
+        Assert.False(sut.HasGalleryImages);
+    }
+
+    [Fact]
+    public async Task GalleryHeadingText_IsEmpty_WhenServiceThrows()
+    {
+        _eventsMock
+            .Setup(e => e.GetEventDetailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new HttpRequestException("offline"));
+        EventDetailViewModel sut = CreateLoadedSut(CreateDetailWithImages(4));
+        sut.ApplyQueryAttributes(new Dictionary<string, object> { ["id"] = "evt-500" });
+
+        await sut.InitializeAsync();
+
+        Assert.Equal(string.Empty, sut.GalleryHeadingText);
+        Assert.False(sut.HasGalleryImages);
+    }
+
     // ── Attendees ─────────────────────────────────────────────────────────────
 
     [Theory]
