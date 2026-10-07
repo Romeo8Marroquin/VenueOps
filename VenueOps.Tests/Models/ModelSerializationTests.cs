@@ -135,4 +135,50 @@ public class ModelSerializationTests
         Assert.Equal(original.AttendeeCount, copy.AttendeeCount);
         Assert.Equal(original.BookingReference, copy.BookingReference);
     }
+
+    [Fact]
+    public void RecentEvent_SerializesWithoutIsImportantAndKeepsExistingWireNames()
+    {
+        RecentEvent recentEvent = new()
+        {
+            Id = "evt-1701",
+            EventName = "Lantern Walk",
+            VenueName = "Old Mill",
+            Status = "confirmed",
+            StartDateUtc = new DateTime(2030, 9, 1, 18, 0, 0, DateTimeKind.Utc),
+            EndDateUtc = new DateTime(2030, 9, 1, 21, 0, 0, DateTimeKind.Utc),
+            AttendeeCount = 500,
+            BookingReference = "BK-1701"
+        };
+
+        JsonElement json = Serialize(recentEvent);
+        string[] names = PropertyNames(json);
+
+        Assert.True(recentEvent.IsImportant);
+        Assert.DoesNotContain(names, name => string.Equals(name, "isImportant", StringComparison.OrdinalIgnoreCase));
+        Assert.Equal(
+            ["id", "eventName", "venueName", "status", "startDateUtc", "endDateUtc", "attendeeCount", "bookingReference"],
+            names);
+        Assert.Equal("Lantern Walk", json.GetProperty("eventName").GetString());
+        Assert.Equal(500, json.GetProperty("attendeeCount").GetInt32());
+    }
+
+    [Fact]
+    public void RecentEvent_IsImportantComesOnlyFromAttendeeCount_WhenDeserialized()
+    {
+        const string flaggedButSmall =
+            """{"id":"evt-1702","eventName":"Quiet Reading","attendeeCount":10,"isImportant":true}""";
+        const string largeWithoutFlag =
+            """{"id":"evt-1703","eventName":"Harvest Market","attendeeCount":500}""";
+
+        RecentEvent? small = JsonSerializer.Deserialize<RecentEvent>(flaggedButSmall);
+        RecentEvent? large = JsonSerializer.Deserialize<RecentEvent>(largeWithoutFlag);
+
+        Assert.NotNull(small);
+        Assert.NotNull(large);
+        Assert.Equal(10, small.AttendeeCount);
+        Assert.False(small.IsImportant);
+        Assert.Equal(500, large.AttendeeCount);
+        Assert.True(large.IsImportant);
+    }
 }

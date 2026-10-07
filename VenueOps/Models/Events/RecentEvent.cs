@@ -30,4 +30,13 @@ public sealed class RecentEvent
 
     [JsonPropertyName("bookingReference")]
     public string BookingReference { get; set; } = string.Empty;
+
+    private const int ImportantAttendeeThreshold = 500;
+
+    /// <summary>
+    /// Derived in the app from <see cref="AttendeeCount"/>; it is not part of the API contract,
+    /// so it is never sent to or read from the backend.
+    /// </summary>
+    [JsonIgnore]
+    public bool IsImportant => AttendeeCount >= ImportantAttendeeThreshold;
 }
