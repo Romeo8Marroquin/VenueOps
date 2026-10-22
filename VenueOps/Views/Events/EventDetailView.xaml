@@ -402,7 +402,7 @@
                             <!-- Links -->
                             <Border Style="{StaticResource Card}" IsVisible="{Binding HasLinks}">
                                 <VerticalStackLayout Spacing="0">
-                                    <Label Text="LINKS" Style="{StaticResource CardSectionLabel}"/>
+                                    <Label Text="{Binding LinksHeadingText}" Style="{StaticResource CardSectionLabel}"/>
                                     <BoxView HeightRequest="1"/>
                                     <VerticalStackLayout
                                         Spacing="0"
@@ -692,7 +692,7 @@
                                 IsVisible="{Binding HasLinks}"
                                 VerticalOptions="Fill">
                                 <VerticalStackLayout Spacing="0">
-                                    <Label Text="LINKS" Style="{StaticResource CardSectionLabel}"/>
+                                    <Label Text="{Binding LinksHeadingText}" Style="{StaticResource CardSectionLabel}"/>
                                     <BoxView HeightRequest="1"/>
                                     <VerticalStackLayout
                                         Spacing="0"

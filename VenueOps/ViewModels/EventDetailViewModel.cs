@@ -39,6 +39,7 @@ public partial class EventDetailViewModel : BaseViewModel, IQueryAttributable
     [NotifyPropertyChangedFor(nameof(OrganizerHasWebsite))]
     [NotifyPropertyChangedFor(nameof(HasTags))]
     [NotifyPropertyChangedFor(nameof(HasLinks))]
+    [NotifyPropertyChangedFor(nameof(LinksHeadingText))]
     [NotifyPropertyChangedFor(nameof(DateRangeDisplay))]
     [NotifyPropertyChangedFor(nameof(DurationDisplay))]
     [NotifyPropertyChangedFor(nameof(HasDuration))]
@@ -64,6 +65,16 @@ public partial class EventDetailViewModel : BaseViewModel, IQueryAttributable
     public bool OrganizerHasWebsite => !string.IsNullOrWhiteSpace(Detail?.Organizer?.WebsiteUrl);
     public bool HasTags         => Detail?.Tags is { Count: > 0 };
     public bool HasLinks        => Detail?.Links is { Count: > 0 };
+
+    /// <summary>
+    /// The links heading, e.g. "LINKS (2)": the number of links the event holds. Empty when
+    /// the event has no links. Formatted with the invariant culture, so it does not depend on
+    /// the device culture.
+    /// </summary>
+    public string LinksHeadingText =>
+        HasLinks
+            ? FormattableString.Invariant($"LINKS ({Detail!.Links.Count})")
+            : string.Empty;
     public IReadOnlyList<EventImage> GalleryImages =>
         Detail?.Images is { Count: > 1 }
             ? (IReadOnlyList<EventImage>)Detail.Images.Skip(1).ToList()
