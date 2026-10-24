@@ -58,7 +58,7 @@ public sealed class NavigationService(IServiceProvider serviceProvider) : INavig
         };
         IPopupResult<bool> result = await host.ShowPopupAsync<bool>(popup, options);
 
-        if (!result.WasDismissedByTappingOutsideOfPopup && result.Result is true)
+        if (!result.WasDismissedByTappingOutsideOfPopup && result.Result)
             await onCreated();
     }
 
@@ -80,7 +80,7 @@ public sealed class NavigationService(IServiceProvider serviceProvider) : INavig
         };
         IPopupResult<bool> result = await host.ShowPopupAsync<bool>(popup, options);
 
-        if (!result.WasDismissedByTappingOutsideOfPopup && result.Result is true)
+        if (!result.WasDismissedByTappingOutsideOfPopup && result.Result)
             await onUpdated();
     }
 

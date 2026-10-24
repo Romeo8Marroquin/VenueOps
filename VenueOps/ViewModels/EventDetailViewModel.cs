@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using VenueOps.Models.Events;
@@ -73,8 +75,10 @@ public partial class EventDetailViewModel : BaseViewModel, IQueryAttributable
     /// </summary>
     public string LinksHeadingText =>
         HasLinks
-            ? FormattableString.Invariant($"LINKS ({Detail!.Links.Count})")
+            ? string.Create(CultureInfo.InvariantCulture, $"LINKS ({Detail!.Links.Count})")
             : string.Empty;
+    [SuppressMessage("Major Code Smell", "S2365:Properties should not make collection or array copies",
+        Justification = "The gallery is bound from XAML, which binds to properties, not methods.")]
     public IReadOnlyList<EventImage> GalleryImages =>
         Detail?.Images is { Count: > 1 }
             ? (IReadOnlyList<EventImage>)Detail.Images.Skip(1).ToList()
@@ -88,7 +92,7 @@ public partial class EventDetailViewModel : BaseViewModel, IQueryAttributable
     /// </summary>
     public string GalleryHeadingText =>
         HasGalleryImages
-            ? FormattableString.Invariant($"Gallery ({GalleryImages.Count})")
+            ? string.Create(CultureInfo.InvariantCulture, $"Gallery ({GalleryImages.Count})")
             : string.Empty;
 
     public string DateRangeDisplay
@@ -154,13 +158,13 @@ public partial class EventDetailViewModel : BaseViewModel, IQueryAttributable
         if (duration < TimeSpan.FromDays(1))
         {
             return duration.Minutes == 0
-                ? FormattableString.Invariant($"{duration.Hours} h")
-                : FormattableString.Invariant($"{duration.Hours} h {duration.Minutes} min");
+                ? string.Create(CultureInfo.InvariantCulture, $"{duration.Hours} h")
+                : string.Create(CultureInfo.InvariantCulture, $"{duration.Hours} h {duration.Minutes} min");
         }
 
         return duration.Hours == 0
-            ? FormattableString.Invariant($"{duration.Days} d")
-            : FormattableString.Invariant($"{duration.Days} d {duration.Hours} h");
+            ? string.Create(CultureInfo.InvariantCulture, $"{duration.Days} d")
+            : string.Create(CultureInfo.InvariantCulture, $"{duration.Days} d {duration.Hours} h");
     }
 
     private static readonly HashSet<string> _finalStatuses =
@@ -171,12 +175,18 @@ public partial class EventDetailViewModel : BaseViewModel, IQueryAttributable
             ? "Attendees"
             : "Exp. Attendees";
 
-    public string AttendeesDisplay =>
-        Detail is null
-            ? string.Empty
-            : _finalStatuses.Contains(Detail.Status)
+    public string AttendeesDisplay
+    {
+        get
+        {
+            if (Detail is null)
+                return string.Empty;
+
+            return _finalStatuses.Contains(Detail.Status)
                 ? $"{Detail.AttendeeCount:N0}"
                 : $"{Detail.ExpectedAtendees:N0}";
+        }
+    }
 
     // ── Constructor ───────────────────────────────────────────────────────
 

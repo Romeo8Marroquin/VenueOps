@@ -14,10 +14,6 @@ public partial class CreateEventView : Popup<bool>
         double windowWidth  = win?.Width  ?? 480;
         double windowHeight = win?.Height ?? 800;
 
-        double popupWidth = windowWidth > 600
-            ? Math.Min(700, windowWidth - 48)
-            : windowWidth - 32;
-
         // The Border grows to fit its content naturally.
         // MaximumHeightRequest caps it so the whole modal scrolls as one unit
         // when the window is too small — no forced height, no empty whitespace.
