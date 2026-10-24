@@ -689,6 +689,81 @@ public class EventDetailViewModelTests
         Assert.False(sut.HasGalleryImages);
     }
 
+    // ── Links heading ─────────────────────────────────────────────────────────
+
+    private static EventDetail CreateDetailWithLinks(int linkCount)
+    {
+        EventDetail detail = CreateDetail();
+        detail.Links = Enumerable.Range(0, linkCount)
+            .Select(i => new EventLink { Label = $"Link {i}", Url = $"https://links.example.invalid/{i}" })
+            .ToList();
+        return detail;
+    }
+
+    [Fact]
+    public void LinksHeadingText_ShowsTheCount_WhenTheEventHasTwoLinks()
+    {
+        EventDetailViewModel sut = CreateLoadedSut(CreateDetailWithLinks(2));
+
+        Assert.Equal("LINKS (2)", sut.LinksHeadingText);
+        Assert.True(sut.HasLinks);
+    }
+
+    [Fact]
+    public void LinksHeadingText_ShowsOne_ForAnEventWithOneLink()
+    {
+        EventDetailViewModel sut = CreateLoadedSut(CreateDetailWithLinks(1));
+
+        Assert.Equal("LINKS (1)", sut.LinksHeadingText);
+        Assert.True(sut.HasLinks);
+    }
+
+    [Fact]
+    public void LinksHeadingText_IsEmptyAndHidden_WhenTheLinksListIsEmpty()
+    {
+        EventDetailViewModel sut = CreateLoadedSut(CreateDetailWithLinks(0));
+
+        Assert.Equal(string.Empty, sut.LinksHeadingText);
+        Assert.False(sut.HasLinks);
+    }
+
+    [Fact]
+    public void LinksHeadingText_IsEmpty_WhenNoEventIsLoaded()
+    {
+        EventDetailViewModel sut = CreateSut();
+
+        Assert.Equal(string.Empty, sut.LinksHeadingText);
+        Assert.False(sut.HasLinks);
+    }
+
+    [Fact]
+    public void Detail_RaisesLinksHeadingTextNotification()
+    {
+        EventDetailViewModel sut = CreateSut();
+        List<string?> raised = [];
+        sut.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+
+        sut.Detail = CreateDetailWithLinks(2);
+
+        Assert.Contains(nameof(EventDetailViewModel.LinksHeadingText), raised);
+        Assert.Equal("LINKS (2)", sut.LinksHeadingText);
+    }
+
+    [Fact]
+    public void LinksHeadingText_FollowsDetail_WhenReplacedWithAnEventWithoutLinks()
+    {
+        EventDetailViewModel sut = CreateLoadedSut(CreateDetailWithLinks(2));
+        Assert.Equal("LINKS (2)", sut.LinksHeadingText);
+        List<string?> raised = [];
+        sut.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+
+        sut.Detail = CreateDetailWithLinks(0);
+
+        Assert.Equal(string.Empty, sut.LinksHeadingText);
+        Assert.False(sut.HasLinks);
+        Assert.Contains(nameof(EventDetailViewModel.LinksHeadingText), raised);
+    }
+
     // ── Attendees ─────────────────────────────────────────────────────────────
 
     [Theory]

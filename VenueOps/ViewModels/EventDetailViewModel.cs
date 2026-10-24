@@ -41,6 +41,7 @@ public partial class EventDetailViewModel : BaseViewModel, IQueryAttributable
     [NotifyPropertyChangedFor(nameof(OrganizerHasWebsite))]
     [NotifyPropertyChangedFor(nameof(HasTags))]
     [NotifyPropertyChangedFor(nameof(HasLinks))]
+    [NotifyPropertyChangedFor(nameof(LinksHeadingText))]
     [NotifyPropertyChangedFor(nameof(DateRangeDisplay))]
     [NotifyPropertyChangedFor(nameof(DurationDisplay))]
     [NotifyPropertyChangedFor(nameof(HasDuration))]
@@ -66,6 +67,16 @@ public partial class EventDetailViewModel : BaseViewModel, IQueryAttributable
     public bool OrganizerHasWebsite => !string.IsNullOrWhiteSpace(Detail?.Organizer?.WebsiteUrl);
     public bool HasTags         => Detail?.Tags is { Count: > 0 };
     public bool HasLinks        => Detail?.Links is { Count: > 0 };
+
+    /// <summary>
+    /// The links heading, e.g. "LINKS (2)": the number of links the event holds. Empty when
+    /// the event has no links. Formatted with the invariant culture, so it does not depend on
+    /// the device culture.
+    /// </summary>
+    public string LinksHeadingText =>
+        HasLinks
+            ? string.Create(CultureInfo.InvariantCulture, $"LINKS ({Detail!.Links.Count})")
+            : string.Empty;
     [SuppressMessage("Major Code Smell", "S2365:Properties should not make collection or array copies",
         Justification = "The gallery is bound from XAML, which binds to properties, not methods.")]
     public IReadOnlyList<EventImage> GalleryImages =>
