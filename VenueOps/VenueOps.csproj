@@ -75,6 +75,11 @@
 		<PackageReference Include="Microsoft.Extensions.Http" Version="10.0.6" />
 		<PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0" />
+		<!-- Sonar's C# rules (code quality and security), run by the build; no server and no token -->
+		<PackageReference Include="SonarAnalyzer.CSharp" Version="10.35.0.4138">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
 	</ItemGroup>
 
 	<ItemGroup>

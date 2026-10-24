@@ -135,6 +135,8 @@ public partial class CreateEventViewModel : BaseViewModel
                 .Select(i => new EventImage { Url = i.Url.Trim(), AltText = i.AltText.Trim(), Credit = i.Credit.Trim() })
                 .ToList();
 
+            var organizerWebsite = string.IsNullOrWhiteSpace(OrganizerWebsite) ? null : OrganizerWebsite.Trim();
+
             var request = new CreateEventRequest
             {
                 EventName        = EventName.Trim(),
@@ -152,7 +154,7 @@ public partial class CreateEventViewModel : BaseViewModel
                                        : new EventOrganizer
                                          {
                                              Name       = OrganizerName.Trim(),
-                                             WebsiteUrl = string.IsNullOrWhiteSpace(OrganizerWebsite) ? null : OrganizerWebsite.Trim()
+                                             WebsiteUrl = organizerWebsite
                                          },
                 Tags   = tags.Count   > 0 ? tags   : null,
                 Links  = links.Count  > 0 ? links  : null,
