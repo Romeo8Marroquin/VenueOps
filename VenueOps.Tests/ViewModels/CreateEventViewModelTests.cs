@@ -480,6 +480,219 @@ public class CreateEventViewModelTests
     private const string ShortDescriptionError = "Short description must be 200 characters or fewer.";
 
     [Fact]
+    public async Task SubmitCommand_KeepsSubmitEnabledAndPopupOpen_WhenShortDescriptionIsRejected()
+    {
+        CreateEventViewModel sut = CreateValidSut();
+        sut.ShortDescription = new string('a', 250);
+
+        await sut.SubmitCommand.ExecuteAsync(null);
+
+        Assert.False(sut.IsBusy);
+        Assert.True(sut.SubmitCommand.CanExecute(null));
+        Assert.Equal(ShortDescriptionError, sut.ErrorMessage);
+        VerifyPopupClosed(true, Times.Never());
+        VerifyServiceNeverCalled();
+    }
+
+    [Fact]
+    public async Task SubmitCommand_TrimsTabsAndNewlines_BeforeRejectingShortDescription()
+    {
+        CreateEventViewModel sut = CreateValidSut();
+        sut.ShortDescription = "\t\r\n" + new string('a', 201) + "\n\t";
+
+        await sut.SubmitCommand.ExecuteAsync(null);
+
+        Assert.Equal(ShortDescriptionError, sut.ErrorMessage);
+        VerifyServiceNeverCalled();
+    }
+
+    [Fact]
+    public async Task SubmitCommand_TrimsTabsAndNewlines_BeforeCountingShortDescription()
+    {
+        CreateEventViewModel sut = CreateValidSut();
+        sut.ShortDescription = "\t\r\n" + new string('a', 200) + "\n\t";
+
+        await sut.SubmitCommand.ExecuteAsync(null);
+
+        VerifyServiceCalledOnce();
+        Assert.False(sut.HasError);
+        Assert.Equal(new string('a', 200), _sent?.ShortDescription);
+    }
+
+    [Fact]
+    public async Task SubmitCommand_CountsInnerSpaces_WhenCheckingShortDescriptionLength()
+    {
+        CreateEventViewModel sut = CreateValidSut();
+        // 100 + 102 + 1 = 203 characters once trimmed
+        sut.ShortDescription = new string('a', 100) + new string(' ', 102) + "b";
+
+        await sut.SubmitCommand.ExecuteAsync(null);
+
+        Assert.Equal(ShortDescriptionError, sut.ErrorMessage);
+        Assert.True(sut.HasError);
+        VerifyServiceNeverCalled();
+    }
+
+    [Fact]
+    public async Task SubmitCommand_ClearsShortDescriptionError_OnceDescriptionIsShortened()
+    {
+        CreateEventViewModel sut = CreateValidSut();
+        sut.ShortDescription = new string('a', 201);
+        await sut.SubmitCommand.ExecuteAsync(null);
+        Assert.Equal(ShortDescriptionError, sut.ErrorMessage);
+        VerifyServiceNeverCalled();
+
+        sut.ShortDescription = new string('a', 200);
+        await sut.SubmitCommand.ExecuteAsync(null);
+
+        Assert.Equal(string.Empty, sut.ErrorMessage);
+        Assert.False(sut.HasError);
+        VerifyServiceCalledOnce();
+        Assert.Equal(new string('a', 200), _sent?.ShortDescription);
+    }
+
+    [Fact]
+    public async Task SubmitCommand_CountsUtf16Units_WhenDescriptionHasSurrogatePairs()
+    {
+        // 101 emoji: 101 visible characters, but 202 UTF-16 code units.
+        // The view model counts UTF-16 units, so this is rejected.
+        CreateEventViewModel sut = CreateValidSut();
+        sut.ShortDescription = string.Concat(Enumerable.Repeat("\U0001F600", 101));
+
+        await sut.SubmitCommand.ExecuteAsync(null);
+
+        Assert.Equal(ShortDescriptionError, sut.ErrorMessage);
+        VerifyServiceNeverCalled();
+    }
+
+    [Fact]
+    public async Task SubmitCommand_AcceptsShortDescription_Of199Characters()
+    {
+        CreateEventViewModel sut = CreateValidSut();
+        sut.ShortDescription = new string('a', 199);
+
+        await sut.SubmitCommand.ExecuteAsync(null);
+
+        VerifyServiceCalledOnce();
+        Assert.False(sut.HasError);
+        Assert.Equal(new string('a', 199), _sent?.ShortDescription);
+    }
+
+    [Fact]
+    public async Task SubmitCommand_TreatsLongWhitespaceShortDescriptionAsEmpty()
+    {
+        CreateEventViewModel sut = CreateValidSut();
+        sut.ShortDescription = new string(' ', 300);
+
+        await sut.SubmitCommand.ExecuteAsync(null);
+
+        VerifyServiceCalledOnce();
+        Assert.False(sut.HasError);
+        Assert.Null(_sent?.ShortDescription);
+    }
+
+    [Fact]
+    public async Task SubmitCommand_ReportsVenueNameFirst_WhenShortDescriptionIsAlsoTooLong()
+    {
+        CreateEventViewModel sut = CreateValidSut();
+        sut.VenueName = string.Empty;
+        sut.ShortDescription = new string('a', 201);
+
+        await sut.SubmitCommand.ExecuteAsync(null);
+
+        Assert.Equal("Venue name is required.", sut.ErrorMessage);
+        VerifyServiceNeverCalled();
+    }
+
+    [Fact]
+    public async Task SubmitCommand_ReportsDateRangeFirst_WhenShortDescriptionIsAlsoTooLong()
+    {
+        CreateEventViewModel sut = CreateValidSut();
+        SetRange(sut, LimitStart, LimitStart);
+        sut.ShortDescription = new string('a', 201);
+
+        await sut.SubmitCommand.ExecuteAsync(null);
+
+        Assert.Equal("End date/time must be after start date/time.", sut.ErrorMessage);
+        VerifyServiceNeverCalled();
+    }
+
+    [Fact]
+    public async Task SubmitCommand_ReportsDurationLimitFirst_WhenShortDescriptionIsAlsoTooLong()
+    {
+        CreateEventViewModel sut = CreateValidSut();
+        SetRange(sut, LimitStart, LimitStart.AddDays(45));
+        sut.ShortDescription = new string('a', 201);
+
+        await sut.SubmitCommand.ExecuteAsync(null);
+
+        Assert.Equal(DurationError, sut.ErrorMessage);
+        VerifyServiceNeverCalled();
+    }
+
+    [Fact]
+    public async Task SubmitCommand_ReportsAttendeesFirst_WhenShortDescriptionIsAlsoTooLong()
+    {
+        CreateEventViewModel sut = CreateValidSut();
+        sut.ExpectedAttendeesText = "abc";
+        sut.ShortDescription = new string('a', 201);
+
+        await sut.SubmitCommand.ExecuteAsync(null);
+
+        Assert.Equal("Expected attendees must be a non-negative number.", sut.ErrorMessage);
+        VerifyServiceNeverCalled();
+    }
+
+    [Theory]
+    [InlineData("name")]
+    [InlineData("venue")]
+    [InlineData("dates")]
+    [InlineData("duration")]
+    [InlineData("attendees")]
+    [InlineData("website")]
+    public async Task SubmitCommand_KeepsExistingMessages_WhenShortDescriptionIsExactly200(string scenario)
+    {
+        CreateEventViewModel sut = CreateValidSut();
+        sut.ShortDescription = new string('a', 200);
+        string expectedError;
+        switch (scenario)
+        {
+            case "name":
+                sut.EventName = string.Empty;
+                expectedError = "Event name is required.";
+                break;
+            case "venue":
+                sut.VenueName = string.Empty;
+                expectedError = "Venue name is required.";
+                break;
+            case "dates":
+                SetRange(sut, LimitStart, LimitStart);
+                expectedError = "End date/time must be after start date/time.";
+                break;
+            case "duration":
+                SetRange(sut, LimitStart, LimitStart.AddDays(45));
+                expectedError = DurationError;
+                break;
+            case "attendees":
+                sut.ExpectedAttendeesText = "abc";
+                expectedError = "Expected attendees must be a non-negative number.";
+                break;
+            case "website":
+                sut.OrganizerWebsite = "venue.example";
+                expectedError = WebsiteError;
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(scenario), scenario, null);
+        }
+
+        await sut.SubmitCommand.ExecuteAsync(null);
+
+        Assert.Equal(expectedError, sut.ErrorMessage);
+        Assert.True(sut.HasError);
+        VerifyServiceNeverCalled();
+    }
+
+    [Fact]
     public async Task SubmitCommand_RejectsShortDescription_Of201Characters()
     {
         CreateEventViewModel sut = CreateValidSut();
@@ -568,6 +781,96 @@ public class CreateEventViewModelTests
 
         Assert.Equal(WebsiteError, sut.ErrorMessage);
         VerifyServiceNeverCalled();
+    }
+
+    // ── Acceptance criteria (AC1–AC3) ─────────────────────────────────────────
+
+    [Theory]
+    [InlineData(0, 201)]    // AC1: over 200 after trimming
+    [InlineData(3, 201)]    // AC1: padding does not change the count
+    [InlineData(40, 201)]   // AC1: heavy padding does not change the count
+    [InlineData(0, 250)]    // AC1: well over the limit
+    public async Task SubmitCommand_AC1_RejectsDescriptionOver200CharactersAfterTrimming(int padding, int length)
+    {
+        CreateEventViewModel sut = CreateValidSut();
+        sut.ShortDescription = new string(' ', padding) + new string('a', length) + new string(' ', padding);
+
+        await sut.SubmitCommand.ExecuteAsync(null);
+
+        Assert.Equal(ShortDescriptionError, sut.ErrorMessage);
+        Assert.True(sut.HasError);
+        Assert.False(sut.IsBusy);
+        VerifyServiceNeverCalled();
+        VerifyPopupClosed(true, Times.Never());
+    }
+
+    [Theory]
+    [InlineData(0, 0)]      // AC2: empty
+    [InlineData(300, 0)]    // AC2: whitespace only is empty after trimming
+    [InlineData(0, 1)]      // AC2: one character
+    [InlineData(0, 199)]    // AC2: just under the limit
+    [InlineData(0, 200)]    // AC2: exactly the limit
+    [InlineData(3, 200)]    // AC2: padding does not count
+    [InlineData(40, 200)]   // AC2: heavy padding does not count
+    public async Task SubmitCommand_AC2_SavesDescriptionOf200OrFewerAfterTrimming(int padding, int length)
+    {
+        CreateEventViewModel sut = CreateValidSut();
+        sut.ShortDescription = new string(' ', padding) + new string('a', length) + new string(' ', padding);
+
+        await sut.SubmitCommand.ExecuteAsync(null);
+
+        VerifyServiceCalledOnce();
+        Assert.False(sut.HasError);
+        string? expected = length == 0 ? null : new string('a', length);
+        Assert.Equal(expected, _sent?.ShortDescription);
+    }
+
+    [Theory]
+    [InlineData("name")]
+    [InlineData("venue")]
+    [InlineData("dates")]
+    [InlineData("duration")]
+    [InlineData("attendees")]
+    [InlineData("website")]
+    public async Task SubmitCommand_AC3_ExistingChecksWinOverNewCheck(string scenario)
+    {
+        CreateEventViewModel sut = CreateValidSut();
+        sut.ShortDescription = new string('a', 201);
+        string expectedError = ApplyExistingCheckFailure(sut, scenario);
+
+        await sut.SubmitCommand.ExecuteAsync(null);
+
+        Assert.Equal(expectedError, sut.ErrorMessage);
+        Assert.True(sut.HasError);
+        VerifyServiceNeverCalled();
+    }
+
+    /// <summary>Makes the form fail one existing check and returns that check's message.</summary>
+    private string ApplyExistingCheckFailure(CreateEventViewModel sut, string scenario)
+    {
+        switch (scenario)
+        {
+            case "name":
+                sut.EventName = string.Empty;
+                return "Event name is required.";
+            case "venue":
+                sut.VenueName = string.Empty;
+                return "Venue name is required.";
+            case "dates":
+                SetRange(sut, LimitStart, LimitStart);
+                return "End date/time must be after start date/time.";
+            case "duration":
+                SetRange(sut, LimitStart, LimitStart.AddDays(45));
+                return DurationError;
+            case "attendees":
+                sut.ExpectedAttendeesText = "abc";
+                return "Expected attendees must be a non-negative number.";
+            case "website":
+                sut.OrganizerWebsite = "venue.example";
+                return WebsiteError;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(scenario), scenario, null);
+        }
     }
 
     // ── Request building ──────────────────────────────────────────────────────
