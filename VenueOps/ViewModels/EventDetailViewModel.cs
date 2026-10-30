@@ -41,6 +41,7 @@ public partial class EventDetailViewModel : BaseViewModel, IQueryAttributable
     [NotifyPropertyChangedFor(nameof(OrganizerHasWebsite))]
     [NotifyPropertyChangedFor(nameof(HasTags))]
     [NotifyPropertyChangedFor(nameof(HasLinks))]
+    [NotifyPropertyChangedFor(nameof(TagsHeadingText))]
     [NotifyPropertyChangedFor(nameof(LinksHeadingText))]
     [NotifyPropertyChangedFor(nameof(DateRangeDisplay))]
     [NotifyPropertyChangedFor(nameof(DurationDisplay))]
@@ -67,6 +68,16 @@ public partial class EventDetailViewModel : BaseViewModel, IQueryAttributable
     public bool OrganizerHasWebsite => !string.IsNullOrWhiteSpace(Detail?.Organizer?.WebsiteUrl);
     public bool HasTags         => Detail?.Tags is { Count: > 0 };
     public bool HasLinks        => Detail?.Links is { Count: > 0 };
+
+    /// <summary>
+    /// The tags heading, e.g. "TAGS (3)": the number of tags the event holds. Empty when
+    /// the event has no tags. Formatted with the invariant culture, so it does not depend on
+    /// the device culture.
+    /// </summary>
+    public string TagsHeadingText =>
+        HasTags
+            ? string.Create(CultureInfo.InvariantCulture, $"TAGS ({Detail!.Tags.Count})")
+            : string.Empty;
 
     /// <summary>
     /// The links heading, e.g. "LINKS (2)": the number of links the event holds. Empty when

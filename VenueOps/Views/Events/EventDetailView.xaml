@@ -364,7 +364,7 @@
                             <!-- Tags -->
                             <Border Style="{StaticResource Card}" IsVisible="{Binding HasTags}">
                                 <VerticalStackLayout Spacing="0">
-                                    <Label Text="TAGS" Style="{StaticResource CardSectionLabel}"/>
+                                    <Label Text="{Binding TagsHeadingText}" Style="{StaticResource CardSectionLabel}"/>
                                     <BoxView HeightRequest="1" Margin="0,0,0,14"/>
                                     <FlexLayout
                                         Wrap="Wrap"
@@ -633,7 +633,7 @@
                                 IsVisible="{Binding HasTags}"
                                 VerticalOptions="Fill">
                                 <VerticalStackLayout Spacing="0">
-                                    <Label Text="TAGS" Style="{StaticResource CardSectionLabel}"/>
+                                    <Label Text="{Binding TagsHeadingText}" Style="{StaticResource CardSectionLabel}"/>
                                     <BoxView HeightRequest="1" Margin="0,0,0,14"/>
                                     <FlexLayout
                                         Wrap="Wrap"

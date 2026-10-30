@@ -764,6 +764,84 @@ public class EventDetailViewModelTests
         Assert.Contains(nameof(EventDetailViewModel.LinksHeadingText), raised);
     }
 
+    // ── Tags heading ──────────────────────────────────────────────────────────
+
+    private static EventDetail CreateDetailWithTags(int tagCount)
+    {
+        EventDetail detail = CreateDetail();
+        detail.Tags = Enumerable.Range(0, tagCount).Select(i => $"tag{i}").ToList();
+        return detail;
+    }
+
+    [Fact]
+    public void TagsHeadingText_ShowsTheCount_WhenTheEventHasThreeTags()
+    {
+        EventDetailViewModel sut = CreateLoadedSut(CreateDetailWithTags(3));
+
+        Assert.Equal("TAGS (3)", sut.TagsHeadingText);
+    }
+
+    [Fact]
+    public void TagsHeadingText_ShowsOne_ForAnEventWithOneTag()
+    {
+        EventDetailViewModel sut = CreateLoadedSut(CreateDetailWithTags(1));
+
+        Assert.Equal("TAGS (1)", sut.TagsHeadingText);
+    }
+
+    [Fact]
+    public void TagsHeadingText_IsEmptyAndHidden_WhenTheTagsListIsEmpty()
+    {
+        EventDetailViewModel sut = CreateLoadedSut(CreateDetailWithTags(0));
+
+        Assert.False(sut.HasTags);
+        Assert.Equal(string.Empty, sut.TagsHeadingText);
+    }
+
+    [Fact]
+    public void Detail_RaisesTagsHeadingTextNotification_AndTheValueFollowsTheNewEvent()
+    {
+        EventDetailViewModel sut = CreateLoadedSut(CreateDetailWithTags(2));
+        List<string?> raised = [];
+        sut.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+
+        sut.Detail = CreateDetailWithTags(5);
+
+        Assert.Contains(nameof(EventDetailViewModel.TagsHeadingText), raised);
+        Assert.Equal("TAGS (5)", sut.TagsHeadingText);
+    }
+
+    [Fact]
+    public async Task TagsHeadingText_IsEmpty_WhenNoEventIsLoaded()
+    {
+        EventDetailViewModel sut = CreateSut();
+
+        Assert.Equal(string.Empty, sut.TagsHeadingText);
+        Assert.False(sut.HasTags);
+
+        SetupDetail(null);
+        sut.ApplyQueryAttributes(new Dictionary<string, object> { ["id"] = "evt-missing" });
+        await sut.InitializeAsync();
+
+        Assert.Null(sut.Detail);
+        Assert.Equal(string.Empty, sut.TagsHeadingText);
+        Assert.False(sut.HasTags);
+    }
+
+    [Fact]
+    public void TagsHeadingText_UsesAsciiDigits_UnderANonLatinDigitCulture()
+    {
+        CultureInfo original = CultureInfo.CurrentCulture;
+        try
+        {
+            CultureInfo.CurrentCulture = new CultureInfo("ar-SA");
+            EventDetailViewModel sut = CreateLoadedSut(CreateDetailWithTags(3));
+
+            Assert.Equal("TAGS (3)", sut.TagsHeadingText);
+        }
+        finally { CultureInfo.CurrentCulture = original; }
+    }
+
     // ── Attendees ─────────────────────────────────────────────────────────────
 
     [Theory]
