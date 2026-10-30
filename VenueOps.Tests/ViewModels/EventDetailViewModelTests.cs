@@ -829,6 +829,152 @@ public class EventDetailViewModelTests
     }
 
     [Fact]
+    public void TagsHeadingText_ShowsTheCount_ForTwoDigitAndLargeTagCounts()
+    {
+        EventDetailViewModel sut = CreateLoadedSut(CreateDetailWithTags(10));
+
+        Assert.Equal("TAGS (10)", sut.TagsHeadingText);
+
+        sut.Detail = CreateDetailWithTags(100);
+
+        Assert.Equal("TAGS (100)", sut.TagsHeadingText);
+    }
+
+    [Fact]
+    public void TagsHeadingText_CountsEveryEntry_IncludingDuplicatesAndBlanks()
+    {
+        EventDetail detail = CreateDetail();
+        detail.Tags = ["food", "food", " "];
+        EventDetailViewModel sut = CreateLoadedSut(detail);
+
+        Assert.Equal(3, sut.Detail!.Tags.Count);
+        Assert.Equal("TAGS (3)", sut.TagsHeadingText);
+    }
+
+    [Fact]
+    public void TagsHeadingText_IsEmptyAndHidden_WhenTheApiSendsNullTags()
+    {
+        // Mirrors a payload where the API sends null for the tags.
+        EventDetail detail = CreateDetail();
+        detail.Tags = null!;
+        EventDetailViewModel sut = CreateLoadedSut(detail);
+
+        Assert.False(sut.HasTags);
+        Assert.Equal(string.Empty, sut.TagsHeadingText);
+    }
+
+    [Fact]
+    public void Detail_ReplacedWithEventWithoutTags_HidesTheCardAndRaisesBothNotifications()
+    {
+        EventDetailViewModel sut = CreateLoadedSut(CreateDetailWithTags(3));
+        List<string?> raised = [];
+        sut.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+
+        sut.Detail = CreateDetailWithTags(0);
+
+        Assert.False(sut.HasTags);
+        Assert.Equal(string.Empty, sut.TagsHeadingText);
+        Assert.Contains(nameof(EventDetailViewModel.HasTags), raised);
+        Assert.Contains(nameof(EventDetailViewModel.TagsHeadingText), raised);
+    }
+
+    [Fact]
+    public void Detail_ClearedToNull_EmptiesTheHeadingAndRaisesItsNotification()
+    {
+        EventDetailViewModel sut = CreateLoadedSut(CreateDetailWithTags(3));
+        List<string?> raised = [];
+        sut.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+
+        sut.Detail = null;
+
+        Assert.Equal(string.Empty, sut.TagsHeadingText);
+        Assert.False(sut.HasTags);
+        Assert.Contains(nameof(EventDetailViewModel.TagsHeadingText), raised);
+    }
+
+    [Fact]
+    public async Task TagsHeadingText_IsRefreshed_WhenInitializeAsyncLoadsAndReloadsAnEvent()
+    {
+        SetupDetail(CreateDetailWithTags(3));
+        EventDetailViewModel sut = CreateSut();
+        sut.ApplyQueryAttributes(new Dictionary<string, object> { ["id"] = "evt-500" });
+        List<string?> raised = [];
+        sut.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+
+        await sut.InitializeAsync();
+
+        Assert.Equal("TAGS (3)", sut.TagsHeadingText);
+        Assert.Contains(nameof(EventDetailViewModel.TagsHeadingText), raised);
+
+        raised.Clear();
+        SetupDetail(CreateDetailWithTags(1));
+
+        await sut.InitializeAsync();
+
+        Assert.Equal("TAGS (1)", sut.TagsHeadingText);
+        Assert.Contains(nameof(EventDetailViewModel.TagsHeadingText), raised);
+    }
+
+    [Fact]
+    public void Detail_SetOnViewModelWithNoEvent_RaisesTagsHeadingTextNotification_AndHeadingReadsTheCount()
+    {
+        EventDetailViewModel sut = CreateSut();
+        List<string?> raised = [];
+        sut.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+
+        sut.Detail = CreateDetailWithTags(2);
+
+        Assert.Contains(nameof(EventDetailViewModel.TagsHeadingText), raised);
+        Assert.Equal("TAGS (2)", sut.TagsHeadingText);
+    }
+
+    [Fact]
+    public void Detail_ReplacedWithADifferentEventWithTheSameTagCount_StillRaisesTheNotification()
+    {
+        EventDetailViewModel sut = CreateLoadedSut(CreateDetailWithTags(3));
+        List<string?> raised = [];
+        sut.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+
+        sut.Detail = CreateDetailWithTags(3);
+
+        Assert.Contains(nameof(EventDetailViewModel.TagsHeadingText), raised);
+        Assert.Equal("TAGS (3)", sut.TagsHeadingText);
+    }
+
+    [Fact]
+    public async Task TagsHeadingText_IsEmptyAndHidden_WhenInitializeAsyncReloadsAnEventWithoutTags()
+    {
+        SetupDetail(CreateDetailWithTags(3));
+        EventDetailViewModel sut = CreateSut();
+        sut.ApplyQueryAttributes(new Dictionary<string, object> { ["id"] = "evt-500" });
+
+        await sut.InitializeAsync();
+
+        Assert.Equal("TAGS (3)", sut.TagsHeadingText);
+
+        SetupDetail(CreateDetailWithTags(0));
+
+        await sut.InitializeAsync();
+
+        Assert.Equal(string.Empty, sut.TagsHeadingText);
+        Assert.False(sut.HasTags);
+    }
+
+    [Fact]
+    public void Detail_SameInstanceAssignedAgain_LeavesTheHeadingUnchangedAndRaisesNoNotification()
+    {
+        EventDetail detail = CreateDetailWithTags(3);
+        EventDetailViewModel sut = CreateLoadedSut(detail);
+        List<string?> raised = [];
+        sut.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+
+        sut.Detail = detail;
+
+        Assert.Equal("TAGS (3)", sut.TagsHeadingText);
+        Assert.DoesNotContain(nameof(EventDetailViewModel.TagsHeadingText), raised);
+    }
+
+    [Fact]
     public void TagsHeadingText_UsesAsciiDigits_UnderANonLatinDigitCulture()
     {
         CultureInfo original = CultureInfo.CurrentCulture;
