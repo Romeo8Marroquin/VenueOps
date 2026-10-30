@@ -32,7 +32,7 @@ public partial class AppShellViewModel : BaseViewModel
 
     /// <summary>
     /// Shows only the local part before @ to keep the narrow flyout tidy.
-    /// e.g. "romeo@gmail.com" → "romeo"
+    /// e.g. "user@example.invalid" → "user"
     /// </summary>
     public string ShortEmail
     {
