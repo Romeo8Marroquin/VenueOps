@@ -475,6 +475,101 @@ public class CreateEventViewModelTests
         Assert.Equal("https://organiser.example.invalid", _sent?.Organizer?.WebsiteUrl);
     }
 
+    // ── Short description length ──────────────────────────────────────────────
+
+    private const string ShortDescriptionError = "Short description must be 200 characters or fewer.";
+
+    [Fact]
+    public async Task SubmitCommand_RejectsShortDescription_Of201Characters()
+    {
+        CreateEventViewModel sut = CreateValidSut();
+        sut.ShortDescription = new string('a', 201);
+
+        await sut.SubmitCommand.ExecuteAsync(null);
+
+        Assert.Equal(ShortDescriptionError, sut.ErrorMessage);
+        Assert.True(sut.HasError);
+        VerifyServiceNeverCalled();
+    }
+
+    [Fact]
+    public async Task SubmitCommand_RejectsShortDescription_Of201CharactersWithPadding()
+    {
+        CreateEventViewModel sut = CreateValidSut();
+        sut.ShortDescription = "   " + new string('a', 201) + "  ";
+
+        await sut.SubmitCommand.ExecuteAsync(null);
+
+        Assert.Equal(ShortDescriptionError, sut.ErrorMessage);
+        VerifyServiceNeverCalled();
+    }
+
+    [Fact]
+    public async Task SubmitCommand_AcceptsShortDescription_Of200Characters()
+    {
+        CreateEventViewModel sut = CreateValidSut();
+        sut.ShortDescription = new string('a', 200);
+
+        await sut.SubmitCommand.ExecuteAsync(null);
+
+        VerifyServiceCalledOnce();
+        Assert.NotEqual(ShortDescriptionError, sut.ErrorMessage);
+        Assert.Equal(new string('a', 200), _sent?.ShortDescription);
+    }
+
+    [Fact]
+    public async Task SubmitCommand_AcceptsShortDescription_Of200CharactersWithPadding()
+    {
+        CreateEventViewModel sut = CreateValidSut();
+        sut.ShortDescription = "   " + new string('a', 200) + "  ";
+
+        await sut.SubmitCommand.ExecuteAsync(null);
+
+        VerifyServiceCalledOnce();
+        Assert.Equal(new string('a', 200), _sent?.ShortDescription);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("    ")]
+    public async Task SubmitCommand_AcceptsEmptyOrWhitespaceShortDescription(string description)
+    {
+        CreateEventViewModel sut = CreateValidSut();
+        sut.ShortDescription = description;
+
+        await sut.SubmitCommand.ExecuteAsync(null);
+
+        VerifyServiceCalledOnce();
+        Assert.False(sut.HasError);
+        Assert.Null(_sent?.ShortDescription);
+    }
+
+    [Fact]
+    public async Task SubmitCommand_ReportsEventNameFirst_WhenShortDescriptionIsAlsoTooLong()
+    {
+        CreateEventViewModel sut = CreateValidSut();
+        sut.EventName = string.Empty;
+        sut.ShortDescription = new string('a', 201);
+
+        await sut.SubmitCommand.ExecuteAsync(null);
+
+        Assert.Equal("Event name is required.", sut.ErrorMessage);
+        VerifyServiceNeverCalled();
+    }
+
+    [Fact]
+    public async Task SubmitCommand_ReportsWebsiteBeforeShortDescription_WhenBothAreInvalid()
+    {
+        CreateEventViewModel sut = CreateValidSut();
+        sut.OrganizerWebsite = "venue.example";
+        sut.ShortDescription = new string('a', 201);
+
+        await sut.SubmitCommand.ExecuteAsync(null);
+
+        Assert.Equal(WebsiteError, sut.ErrorMessage);
+        VerifyServiceNeverCalled();
+    }
+
     // ── Request building ──────────────────────────────────────────────────────
 
     [Fact]

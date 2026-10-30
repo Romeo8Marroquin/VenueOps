@@ -11,6 +11,7 @@ namespace VenueOps.ViewModels;
 public partial class CreateEventViewModel : BaseViewModel
 {
     private static readonly TimeSpan MaxEventDuration = TimeSpan.FromDays(30);
+    private const int MaxShortDescriptionLength = 200;
 
     private readonly IEventsService _eventsService;
     private readonly IPopupService _popupService;
@@ -240,6 +241,12 @@ public partial class CreateEventViewModel : BaseViewModel
             && !IsAbsoluteHttpUrl(OrganizerWebsite.Trim()))
         {
             ErrorMessage = "Organizer website must be a full http or https address.";
+            return false;
+        }
+
+        if (ShortDescription.Trim().Length > MaxShortDescriptionLength)
+        {
+            ErrorMessage = "Short description must be 200 characters or fewer.";
             return false;
         }
 
