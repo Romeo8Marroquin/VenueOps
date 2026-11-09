@@ -11,6 +11,7 @@ public partial class EventDetailViewModel : BaseViewModel, IQueryAttributable
 {
     private readonly IEventsService     _eventsService;
     private readonly INavigationService _navigationService;
+    private readonly IClipboardService  _clipboard;
     private string _eventId = string.Empty;
 
     // ── Layout ────────────────────────────────────────────────────────────
@@ -52,6 +53,7 @@ public partial class EventDetailViewModel : BaseViewModel, IQueryAttributable
     [NotifyPropertyChangedFor(nameof(GalleryHeadingText))]
     [NotifyPropertyChangedFor(nameof(BookingReferenceDisplay))]
     [NotifyPropertyChangedFor(nameof(HasBookingReference))]
+    [NotifyCanExecuteChangedFor(nameof(CopyAsJsonCommand))]
     public partial EventDetail? Detail { get; set; }
 
     // ── Computed ──────────────────────────────────────────────────────────
@@ -190,10 +192,11 @@ public partial class EventDetailViewModel : BaseViewModel, IQueryAttributable
 
     // ── Constructor ───────────────────────────────────────────────────────
 
-    public EventDetailViewModel(IEventsService eventsService, INavigationService navigationService)
+    public EventDetailViewModel(IEventsService eventsService, INavigationService navigationService, IClipboardService clipboard)
     {
         _eventsService     = eventsService;
         _navigationService = navigationService;
+        _clipboard         = clipboard;
         Title = "Event Detail";
     }
 
@@ -237,6 +240,27 @@ public partial class EventDetailViewModel : BaseViewModel, IQueryAttributable
 
     [RelayCommand]
     private Task RetryAsync() => InitializeAsync();
+
+    /// <summary>
+    /// The event as indented JSON for the venue partner's import tool: camelCase names and
+    /// ISO 8601 UTC dates, written by Newtonsoft.Json.
+    /// </summary>
+    public static string BuildEventJson(EventDetail detail)
+    {
+        var settings = new Newtonsoft.Json.JsonSerializerSettings
+        {
+            Formatting           = Newtonsoft.Json.Formatting.Indented,
+            ContractResolver     = new Newtonsoft.Json.Serialization.CamelCasePropertyNamesContractResolver(),
+            DateFormatHandling   = Newtonsoft.Json.DateFormatHandling.IsoDateFormat,
+            DateTimeZoneHandling = Newtonsoft.Json.DateTimeZoneHandling.Utc
+        };
+        return Newtonsoft.Json.JsonConvert.SerializeObject(detail, settings);
+    }
+
+    [RelayCommand(CanExecute = nameof(CanCopyAsJson))]
+    private Task CopyAsJsonAsync() => _clipboard.SetTextAsync(BuildEventJson(Detail!));
+
+    private bool CanCopyAsJson() => Detail is not null;
 
     [RelayCommand]
     private async Task EditEventAsync()
