@@ -938,14 +938,28 @@ public class EventDetailViewModelTests
     [Fact]
     public void NewtonsoftJson_IsThePinnedVersion()
     {
-        string? version = typeof(Newtonsoft.Json.JsonConvert).Assembly
-            .GetCustomAttributes(typeof(System.Reflection.AssemblyInformationalVersionAttribute), false)
-            .Cast<System.Reflection.AssemblyInformationalVersionAttribute>()
-            .Select(a => a.InformationalVersion)
-            .FirstOrDefault();
+        // The test host may resolve a newer Newtonsoft.Json at runtime, so check the app project's reference.
+        string? dir = AppContext.BaseDirectory;
+        string? csproj = null;
+        while (dir is not null)
+        {
+            string candidate = Path.Combine(dir, "VenueOps", "VenueOps.csproj");
+            if (File.Exists(candidate))
+            {
+                csproj = candidate;
+                break;
+            }
+            dir = Path.GetDirectoryName(dir);
+        }
 
-        Assert.NotNull(version);
-        Assert.StartsWith("12.0.3", version);
+        Assert.NotNull(csproj);
+        var reference = System.Xml.Linq.XDocument.Load(csproj)
+            .Descendants("PackageReference")
+            .Where(e => (string?)e.Attribute("Include") == "Newtonsoft.Json")
+            .ToList();
+
+        Assert.Single(reference);
+        Assert.Equal("12.0.3", (string?)reference[0].Attribute("Version"));
     }
 
     [Fact]
