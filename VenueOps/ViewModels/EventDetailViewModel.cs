@@ -47,6 +47,8 @@ public partial class EventDetailViewModel : BaseViewModel, IQueryAttributable
     [NotifyPropertyChangedFor(nameof(HasDuration))]
     [NotifyPropertyChangedFor(nameof(AttendeesLabel))]
     [NotifyPropertyChangedFor(nameof(AttendeesDisplay))]
+    [NotifyPropertyChangedFor(nameof(AttendanceDisplay))]
+    [NotifyPropertyChangedFor(nameof(HasAttendanceDisplay))]
     [NotifyPropertyChangedFor(nameof(GalleryImages))]
     [NotifyPropertyChangedFor(nameof(HasGalleryImages))]
     [NotifyPropertyChangedFor(nameof(GalleryHeadingText))]
@@ -187,6 +189,22 @@ public partial class EventDetailViewModel : BaseViewModel, IQueryAttributable
                 : $"{Detail.ExpectedAtendees:N0}";
         }
     }
+
+    /// <summary>
+    /// "Attendance: P% of expected", P being attendees / expected attendees x 100 rounded down
+    /// (not capped). Empty when no event is loaded or the expected attendees are 0 or fewer.
+    /// </summary>
+    public string AttendanceDisplay
+    {
+        get
+        {
+            if (Detail is null || Detail.ExpectedAtendees <= 0) return string.Empty;
+            long p = (long)Detail.AttendeeCount * 100 / Detail.ExpectedAtendees;
+            return string.Create(CultureInfo.InvariantCulture, $"Attendance: {p}% of expected");
+        }
+    }
+
+    public bool HasAttendanceDisplay => AttendanceDisplay.Length > 0;
 
     // ── Constructor ───────────────────────────────────────────────────────
 

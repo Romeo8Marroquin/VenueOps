@@ -781,6 +781,103 @@ public class EventDetailViewModelTests
         WithInvariantCulture(() => Assert.Equal(expectedDisplay, sut.AttendeesDisplay));
     }
 
+    // ── Attendance ────────────────────────────────────────────────────────────
+
+    private static EventDetail CreateDetailWithAttendance(int attendees, int expected)
+    {
+        EventDetail detail = CreateDetail();
+        detail.AttendeeCount = attendees;
+        detail.ExpectedAtendees = expected;
+        return detail;
+    }
+
+    [Theory]
+    [InlineData(300, 400, "Attendance: 75% of expected")]
+    [InlineData(1, 3, "Attendance: 33% of expected")]
+    [InlineData(0, 400, "Attendance: 0% of expected")]
+    [InlineData(480, 400, "Attendance: 120% of expected")]
+    [InlineData(int.MaxValue, int.MaxValue, "Attendance: 100% of expected")]
+    public void AttendanceDisplay_ShowsRoundedDownShare(int attendees, int expected, string text)
+    {
+        EventDetailViewModel sut = CreateLoadedSut(CreateDetailWithAttendance(attendees, expected));
+
+        Assert.Equal(text, sut.AttendanceDisplay);
+        Assert.True(sut.HasAttendanceDisplay);
+    }
+
+    [Fact]
+    public void AttendanceDisplay_IsEmptyAndHidden_WhenNoDetail()
+    {
+        EventDetailViewModel sut = CreateSut();
+
+        Assert.Equal(string.Empty, sut.AttendanceDisplay);
+        Assert.False(sut.HasAttendanceDisplay);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-5)]
+    public void AttendanceDisplay_IsEmptyAndHidden_WhenExpectedIsNotPositive(int expected)
+    {
+        EventDetailViewModel sut = CreateLoadedSut(CreateDetailWithAttendance(10, expected));
+
+        Assert.Equal(string.Empty, sut.AttendanceDisplay);
+        Assert.False(sut.HasAttendanceDisplay);
+    }
+
+    [Fact]
+    public void Detail_RaisesAttendanceNotifications_AndTextFollowsNewEvent()
+    {
+        EventDetailViewModel sut = CreateSut();
+        List<string?> raised = [];
+        sut.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+
+        sut.Detail = CreateDetailWithAttendance(300, 400);
+
+        Assert.Contains(nameof(EventDetailViewModel.AttendanceDisplay), raised);
+        Assert.Contains(nameof(EventDetailViewModel.HasAttendanceDisplay), raised);
+        Assert.Equal("Attendance: 75% of expected", sut.AttendanceDisplay);
+
+        sut.Detail = CreateDetailWithAttendance(200, 400);
+
+        Assert.Equal("Attendance: 50% of expected", sut.AttendanceDisplay);
+    }
+
+    [Fact]
+    public async Task AttendanceDisplay_IsShownAfterLoad_AndHiddenWhenRetryReturnsNull()
+    {
+        SetupDetail(CreateDetailWithAttendance(300, 400));
+        EventDetailViewModel sut = CreateSut();
+        sut.ApplyQueryAttributes(new Dictionary<string, object> { ["id"] = "evt-500" });
+
+        await sut.InitializeAsync();
+
+        Assert.Equal("Attendance: 75% of expected", sut.AttendanceDisplay);
+
+        SetupDetail(null);
+        await sut.InitializeAsync();
+
+        Assert.Equal(string.Empty, sut.AttendanceDisplay);
+        Assert.False(sut.HasAttendanceDisplay);
+    }
+
+    [Fact]
+    public void AttendanceDisplay_DoesNotDependOnCurrentCulture()
+    {
+        EventDetailViewModel sut = CreateLoadedSut(CreateDetailWithAttendance(300, 400));
+        CultureInfo original = CultureInfo.CurrentCulture;
+        try
+        {
+            CultureInfo.CurrentCulture = new CultureInfo("ar-SA");
+
+            Assert.Equal("Attendance: 75% of expected", sut.AttendanceDisplay);
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = original;
+        }
+    }
+
     // ── Query attributes + InitializeAsync ────────────────────────────────────
 
     [Fact]
