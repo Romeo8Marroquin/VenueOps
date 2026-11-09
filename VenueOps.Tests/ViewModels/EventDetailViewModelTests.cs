@@ -17,7 +17,9 @@ public class EventDetailViewModelTests
         _navMock.Setup(n => n.PushEditEventModalAsync(It.IsAny<EventDetail>(), It.IsAny<Func<Task>>())).Returns(Task.CompletedTask);
     }
 
-    private EventDetailViewModel CreateSut() => new(_eventsMock.Object, _navMock.Object);
+    private readonly Mock<IClipboardService> _clipboardMock = new();
+
+    private EventDetailViewModel CreateSut() => new(_eventsMock.Object, _navMock.Object, _clipboardMock.Object);
 
     private static EventDetail CreateDetail() => new()
     {
@@ -929,5 +931,127 @@ public class EventDetailViewModelTests
         Exception? ex = await Record.ExceptionAsync(() => CreateSut().OpenLinkCommand.ExecuteAsync(url));
 
         Assert.Null(ex);
+    }
+
+    // ── Copy as JSON ──────────────────────────────────────────────────────────
+
+    [Fact]
+    public void NewtonsoftJson_IsThePinnedVersion()
+    {
+        string? version = typeof(Newtonsoft.Json.JsonConvert).Assembly
+            .GetCustomAttributes(typeof(System.Reflection.AssemblyInformationalVersionAttribute), false)
+            .Cast<System.Reflection.AssemblyInformationalVersionAttribute>()
+            .Select(a => a.InformationalVersion)
+            .FirstOrDefault();
+
+        Assert.NotNull(version);
+        Assert.StartsWith("12.0.3", version);
+    }
+
+    [Fact]
+    public async Task CopyAsJsonCommand_CopiesBuiltJsonToClipboard()
+    {
+        EventDetail detail = CreateDetail();
+        _clipboardMock.Setup(c => c.SetTextAsync(It.IsAny<string>())).Returns(Task.CompletedTask);
+        EventDetailViewModel sut = CreateLoadedSut(detail);
+
+        await sut.CopyAsJsonCommand.ExecuteAsync(null);
+
+        _clipboardMock.Verify(c => c.SetTextAsync(EventDetailViewModel.BuildEventJson(detail)), Times.Once);
+    }
+
+    [Fact]
+    public void BuildEventJson_IsIndented()
+    {
+        string json = EventDetailViewModel.BuildEventJson(CreateDetail());
+
+        Assert.Contains("\n", json);
+        Assert.Contains("  \"eventName\"", json);
+    }
+
+    [Fact]
+    public void BuildEventJson_UsesCamelCaseNames_AndNoPascalCaseNames()
+    {
+        var obj = Newtonsoft.Json.Linq.JObject.Parse(EventDetailViewModel.BuildEventJson(CreateDetail()));
+        List<string> names = obj.Properties().Select(p => p.Name).ToList();
+
+        foreach (string expected in new[]
+        {
+            "id", "eventName", "venueName", "status", "startDateUtc", "endDateUtc",
+            "expectedAtendees", "attendeeCount", "bookingReference", "shortDescription",
+            "images", "location", "organizer", "tags", "links"
+        })
+        {
+            Assert.Contains(expected, names);
+        }
+
+        Assert.DoesNotContain(names, n => char.IsUpper(n[0]));
+        Assert.Equal("Aurora Night Market", (string?)obj["eventName"]);
+    }
+
+    [Fact]
+    public void BuildEventJson_WritesUtcDateAsIso8601()
+    {
+        EventDetail detail = CreateDetail();
+        detail.StartDateUtc = new DateTime(2025, 3, 4, 5, 6, 7, DateTimeKind.Utc);
+
+        string json = EventDetailViewModel.BuildEventJson(detail);
+
+        Assert.Contains("\"startDateUtc\": \"2025-03-04T05:06:07Z\"", json);
+    }
+
+    [Fact]
+    public void BuildEventJson_ConvertsLocalDateToUtc()
+    {
+        EventDetail detail = CreateDetail();
+        DateTime local = new(2025, 3, 4, 5, 6, 7, DateTimeKind.Local);
+        detail.EndDateUtc = local;
+
+        string json = EventDetailViewModel.BuildEventJson(detail);
+
+        string expected = local.ToUniversalTime().ToString("yyyy-MM-dd'T'HH:mm:ss'Z'", CultureInfo.InvariantCulture);
+        Assert.Contains($"\"endDateUtc\": \"{expected}\"", json);
+    }
+
+    [Fact]
+    public void BuildEventJson_IncludesNestedValues()
+    {
+        var obj = Newtonsoft.Json.Linq.JObject.Parse(EventDetailViewModel.BuildEventJson(CreateDetail()));
+
+        Assert.Equal("3 Example Quay", (string?)obj["location"]!["formattedAddress"]);
+        Assert.Equal("Night Markets Ltd", (string?)obj["organizer"]!["name"]);
+        Assert.Equal(["food", "music"], obj["tags"]!.Select(t => (string?)t));
+        Assert.Equal("Map", (string?)obj["links"]![0]!["label"]);
+        Assert.Equal(3, obj["images"]!.Count());
+    }
+
+    [Fact]
+    public void BuildEventJson_WritesNullOptionalObjectsAsNull()
+    {
+        EventDetail detail = CreateDetail();
+        detail.Location = null;
+        detail.Organizer = null;
+
+        var obj = Newtonsoft.Json.Linq.JObject.Parse(EventDetailViewModel.BuildEventJson(detail));
+
+        Assert.True(obj.ContainsKey("location"));
+        Assert.True(obj.ContainsKey("organizer"));
+        Assert.Equal(Newtonsoft.Json.Linq.JTokenType.Null, obj["location"]!.Type);
+        Assert.Equal(Newtonsoft.Json.Linq.JTokenType.Null, obj["organizer"]!.Type);
+    }
+
+    [Fact]
+    public void CopyAsJsonCommand_CanExecuteFollowsDetail()
+    {
+        EventDetailViewModel sut = CreateSut();
+        int raised = 0;
+        sut.CopyAsJsonCommand.CanExecuteChanged += (_, _) => raised++;
+
+        Assert.False(sut.CopyAsJsonCommand.CanExecute(null));
+
+        sut.Detail = CreateDetail();
+
+        Assert.True(sut.CopyAsJsonCommand.CanExecute(null));
+        Assert.True(raised > 0);
     }
 }
