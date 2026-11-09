@@ -11,6 +11,7 @@ public partial class EventDetailViewModel : BaseViewModel, IQueryAttributable
 {
     private readonly IEventsService     _eventsService;
     private readonly INavigationService _navigationService;
+    private readonly IShareService      _shareService;
     private string _eventId = string.Empty;
 
     // ── Layout ────────────────────────────────────────────────────────────
@@ -190,10 +191,11 @@ public partial class EventDetailViewModel : BaseViewModel, IQueryAttributable
 
     // ── Constructor ───────────────────────────────────────────────────────
 
-    public EventDetailViewModel(IEventsService eventsService, INavigationService navigationService)
+    public EventDetailViewModel(IEventsService eventsService, INavigationService navigationService, IShareService shareService)
     {
         _eventsService     = eventsService;
         _navigationService = navigationService;
+        _shareService      = shareService;
         Title = "Event Detail";
     }
 
@@ -251,6 +253,39 @@ public partial class EventDetailViewModel : BaseViewModel, IQueryAttributable
     {
         if (!string.IsNullOrWhiteSpace(url) && Uri.TryCreate(url, UriKind.Absolute, out var uri))
             await Launcher.Default.OpenAsync(uri);
+    }
+
+    private bool CanShare() => Detail is not null;
+
+    partial void OnDetailChanged(EventDetail? value) => ShareCommand.NotifyCanExecuteChanged();
+
+    [RelayCommand(CanExecute = nameof(CanShare))]
+    private async Task ShareAsync()
+    {
+        if (Detail is null) return;
+
+        string title = Detail.EventName;
+        string text = string.Join("\n",
+            Detail.EventName,
+            Detail.VenueName,
+            FormatUtc(Detail.StartDateUtc),
+            FormatUtc(Detail.EndDateUtc),
+            Detail.BookingReference);
+
+        try
+        {
+            await _shareService.ShareTextAsync(title, text);
+        }
+        catch
+        {
+            // Sharing is best effort: nothing is shown and the screen state is unchanged.
+        }
+    }
+
+    private static string FormatUtc(DateTime value)
+    {
+        DateTime utc = value.Kind == DateTimeKind.Local ? value.ToUniversalTime() : value;
+        return utc.ToString("yyyy-MM-dd'T'HH:mm:ss'Z'", CultureInfo.InvariantCulture);
     }
 
     // ── Hooks ─────────────────────────────────────────────────────────────
