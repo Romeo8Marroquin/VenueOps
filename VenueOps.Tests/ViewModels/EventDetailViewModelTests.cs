@@ -1034,7 +1034,10 @@ public class EventDetailViewModelTests
 
         Assert.Equal("3 Example Quay", (string?)obj["location"]!["formattedAddress"]);
         Assert.Equal("Night Markets Ltd", (string?)obj["organizer"]!["name"]);
-        Assert.Equal(["food", "music"], obj["tags"]!.Select(t => (string?)t));
+        List<string?> tags = obj["tags"]!.Select(t => (string?)t).ToList();
+        Assert.Equal(2, tags.Count);
+        Assert.Equal("food", tags[0]);
+        Assert.Equal("music", tags[1]);
         Assert.Equal("Map", (string?)obj["links"]![0]!["label"]);
         Assert.Equal(3, obj["images"]!.Count());
     }
@@ -1048,8 +1051,8 @@ public class EventDetailViewModelTests
 
         var obj = Newtonsoft.Json.Linq.JObject.Parse(EventDetailViewModel.BuildEventJson(detail));
 
-        Assert.True(obj.ContainsKey("location"));
-        Assert.True(obj.ContainsKey("organizer"));
+        Assert.NotNull(obj.Property("location"));
+        Assert.NotNull(obj.Property("organizer"));
         Assert.Equal(Newtonsoft.Json.Linq.JTokenType.Null, obj["location"]!.Type);
         Assert.Equal(Newtonsoft.Json.Linq.JTokenType.Null, obj["organizer"]!.Type);
     }
