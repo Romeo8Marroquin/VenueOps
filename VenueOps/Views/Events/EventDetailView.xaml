@@ -295,8 +295,13 @@
                                         <Label Grid.Column="1" Text="{Binding Detail.VenueName}" Style="{StaticResource DetailValue}"/>
                                     </Grid>
                                     <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12" Margin="0,0,0,10">
-                                        <Label Grid.Column="0" Text="{Binding AttendeesLabel}" Style="{StaticResource DetailKey}"/>
-                                        <Label Grid.Column="1" Text="{Binding AttendeesDisplay}" Style="{StaticResource DetailValue}"/>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+                                        <Label Grid.Column="0" Grid.Row="0" Text="{Binding AttendeesLabel}" Style="{StaticResource DetailKey}"/>
+                                        <Label Grid.Column="1" Grid.Row="0" Text="{Binding AttendeesDisplay}" Style="{StaticResource DetailValue}"/>
+                                        <Label Grid.Column="1" Grid.Row="1" Text="{Binding AttendanceDisplay}" IsVisible="{Binding HasAttendanceDisplay}" Style="{StaticResource DetailValue}"/>
                                     </Grid>
                                     <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12" IsVisible="{Binding HasBookingReference}">
                                         <Label Grid.Column="0" Text="Booking Ref" Style="{StaticResource DetailKey}" IsVisible="{Binding HasBookingReference}"/>
@@ -580,6 +585,7 @@
                                 <VerticalStackLayout Spacing="0" VerticalOptions="Center">
                                     <Label Text="{Binding AttendeesLabel}" Style="{StaticResource TileKey}"/>
                                     <Label Text="{Binding AttendeesDisplay}" Style="{StaticResource TileValue}" MaxLines="2"/>
+                                    <Label Text="{Binding AttendanceDisplay}" IsVisible="{Binding HasAttendanceDisplay}" Style="{StaticResource TileValue}" MaxLines="2"/>
                                 </VerticalStackLayout>
                             </Border>
 
