@@ -11,6 +11,7 @@ public partial class EventDetailViewModel : BaseViewModel, IQueryAttributable
 {
     private readonly IEventsService     _eventsService;
     private readonly INavigationService _navigationService;
+    private readonly IShareService      _shareService;
     private string _eventId = string.Empty;
 
     // ── Layout ────────────────────────────────────────────────────────────
@@ -52,6 +53,7 @@ public partial class EventDetailViewModel : BaseViewModel, IQueryAttributable
     [NotifyPropertyChangedFor(nameof(GalleryHeadingText))]
     [NotifyPropertyChangedFor(nameof(BookingReferenceDisplay))]
     [NotifyPropertyChangedFor(nameof(HasBookingReference))]
+    [NotifyCanExecuteChangedFor(nameof(ShareCommand))]
     public partial EventDetail? Detail { get; set; }
 
     // ── Computed ──────────────────────────────────────────────────────────
@@ -190,10 +192,11 @@ public partial class EventDetailViewModel : BaseViewModel, IQueryAttributable
 
     // ── Constructor ───────────────────────────────────────────────────────
 
-    public EventDetailViewModel(IEventsService eventsService, INavigationService navigationService)
+    public EventDetailViewModel(IEventsService eventsService, INavigationService navigationService, IShareService shareService)
     {
         _eventsService     = eventsService;
         _navigationService = navigationService;
+        _shareService      = shareService;
         Title = "Event Detail";
     }
 
@@ -251,6 +254,36 @@ public partial class EventDetailViewModel : BaseViewModel, IQueryAttributable
     {
         if (!string.IsNullOrWhiteSpace(url) && Uri.TryCreate(url, UriKind.Absolute, out var uri))
             await Launcher.Default.OpenAsync(uri);
+    }
+
+    [RelayCommand(CanExecute = nameof(CanShare))]
+    private async Task ShareAsync()
+    {
+        if (Detail is null) return;
+        try
+        {
+            await _shareService.ShareTextAsync(Detail.EventName, BuildShareText(Detail));
+        }
+        catch (Exception)
+        {
+            // Sharing is best effort: nothing is shown and the screen state stays as it is.
+        }
+    }
+
+    private bool CanShare() => Detail is not null;
+
+    private static string BuildShareText(EventDetail detail)
+        => string.Join("\n",
+            detail.EventName,
+            detail.VenueName,
+            FormatUtc(detail.StartDateUtc),
+            FormatUtc(detail.EndDateUtc),
+            detail.BookingReference);
+
+    private static string FormatUtc(DateTime value)
+    {
+        var utc = value.Kind == DateTimeKind.Local ? value.ToUniversalTime() : value;
+        return utc.ToString("yyyy-MM-dd'T'HH:mm:ss'Z'", CultureInfo.InvariantCulture);
     }
 
     // ── Hooks ─────────────────────────────────────────────────────────────

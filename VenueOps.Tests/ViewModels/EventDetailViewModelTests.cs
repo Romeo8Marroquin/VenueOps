@@ -17,7 +17,9 @@ public class EventDetailViewModelTests
         _navMock.Setup(n => n.PushEditEventModalAsync(It.IsAny<EventDetail>(), It.IsAny<Func<Task>>())).Returns(Task.CompletedTask);
     }
 
-    private EventDetailViewModel CreateSut() => new(_eventsMock.Object, _navMock.Object);
+    private readonly Mock<IShareService> _shareMock = new();
+
+    private EventDetailViewModel CreateSut() => new(_eventsMock.Object, _navMock.Object, _shareMock.Object);
 
     private static EventDetail CreateDetail() => new()
     {
@@ -877,6 +879,194 @@ public class EventDetailViewModelTests
     }
 
     // ── Commands ──────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task ShareCommand_SharesWithEventNameAsTitle()
+    {
+        EventDetailViewModel sut = CreateLoadedSut(CreateDetail());
+
+        await sut.ShareCommand.ExecuteAsync(null);
+
+        _shareMock.Verify(s => s.ShareTextAsync("Aurora Night Market", It.IsAny<string>()), Times.Once);
+    }
+
+    private async Task<string> ShareAndCaptureTextAsync(EventDetail detail)
+    {
+        string? captured = null;
+        _shareMock
+            .Setup(s => s.ShareTextAsync(It.IsAny<string>(), It.IsAny<string>()))
+            .Callback<string, string>((_, text) => captured = text)
+            .Returns(Task.CompletedTask);
+        EventDetailViewModel sut = CreateLoadedSut(detail);
+
+        await sut.ShareCommand.ExecuteAsync(null);
+
+        Assert.NotNull(captured);
+        return captured;
+    }
+
+    [Fact]
+    public async Task ShareCommand_SharesNameVenueUtcStartEndAndRawBookingReference()
+    {
+        EventDetail detail = new()
+        {
+            EventName = "Name",
+            VenueName = "Venue",
+            StartDateUtc = new DateTime(2030, 5, 1, 9, 0, 0, DateTimeKind.Utc),
+            EndDateUtc = new DateTime(2030, 5, 1, 11, 30, 0, DateTimeKind.Utc),
+            BookingReference = "vno7k2x9q4"
+        };
+
+        string text = await ShareAndCaptureTextAsync(detail);
+
+        Assert.Equal("Name\nVenue\n2030-05-01T09:00:00Z\n2030-05-01T11:30:00Z\nvno7k2x9q4", text);
+    }
+
+    [Fact]
+    public async Task ShareCommand_SharesOnlyFiveLinesWithoutOtherFields()
+    {
+        EventDetail detail = CreateDetail();
+        detail.Status = "cancelled";
+
+        string text = await ShareAndCaptureTextAsync(detail);
+
+        Assert.Equal(5, text.Split('\n').Length);
+        Assert.DoesNotContain("cancelled", text);
+        Assert.DoesNotContain(detail.ShortDescription, text);
+        Assert.DoesNotContain("1200", text);
+        Assert.DoesNotContain("1180", text);
+        Assert.DoesNotContain("http", text);
+    }
+
+    [Fact]
+    public async Task ShareCommand_ConvertsLocalToUtc_AndIsCultureIndependent()
+    {
+        DateTime local = new(2030, 5, 1, 9, 0, 0, DateTimeKind.Local);
+        EventDetail detail = CreateDetail();
+        detail.StartDateUtc = local;
+        detail.EndDateUtc = new DateTime(2030, 5, 1, 11, 30, 0, DateTimeKind.Unspecified);
+        string expectedStart = local.ToUniversalTime().ToString("yyyy-MM-dd'T'HH:mm:ss'Z'", CultureInfo.InvariantCulture);
+
+        CultureInfo original = CultureInfo.CurrentCulture;
+        string text;
+        try
+        {
+            CultureInfo.CurrentCulture = new CultureInfo("de-DE");
+            text = await ShareAndCaptureTextAsync(detail);
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = original;
+        }
+
+        string[] lines = text.Split('\n');
+        Assert.Equal(expectedStart, lines[2]);
+        Assert.Equal("2030-05-01T11:30:00Z", lines[3]);
+    }
+
+    [Theory]
+    [InlineData("draft")]
+    [InlineData("confirmed")]
+    [InlineData("completed")]
+    [InlineData("cancelled")]
+    public async Task ShareCommand_WorksForEveryStatus(string status)
+    {
+        EventDetail detail = CreateDetail();
+        detail.Status = status;
+        EventDetailViewModel sut = CreateLoadedSut(detail);
+
+        Assert.True(sut.ShareCommand.CanExecute(null));
+        await sut.ShareCommand.ExecuteAsync(null);
+
+        _shareMock.Verify(s => s.ShareTextAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ShareCommand_CannotExecute_WhenNoDetailIsLoaded()
+    {
+        EventDetailViewModel sut = CreateSut();
+
+        Assert.False(sut.ShareCommand.CanExecute(null));
+        await sut.ShareCommand.ExecuteAsync(null);
+
+        _shareMock.Verify(s => s.ShareTextAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ShareCommand_CannotExecute_AfterLoadReturnsNull()
+    {
+        SetupDetail(null);
+        EventDetailViewModel sut = CreateSut();
+        sut.ApplyQueryAttributes(new Dictionary<string, object> { ["id"] = "evt-missing" });
+
+        await sut.InitializeAsync();
+
+        Assert.False(sut.ShareCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task ShareCommand_CannotExecute_AfterLoadThrows()
+    {
+        _eventsMock
+            .Setup(e => e.GetEventDetailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new HttpRequestException("offline"));
+        EventDetailViewModel sut = CreateSut();
+        sut.ApplyQueryAttributes(new Dictionary<string, object> { ["id"] = "evt-500" });
+
+        await sut.InitializeAsync();
+
+        Assert.False(sut.ShareCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task ShareCommand_CanExecute_AfterSuccessfulLoad_AndRaisesCanExecuteChanged()
+    {
+        SetupDetail(CreateDetail());
+        EventDetailViewModel sut = CreateSut();
+        sut.ApplyQueryAttributes(new Dictionary<string, object> { ["id"] = "evt-500" });
+        int raised = 0;
+        sut.ShareCommand.CanExecuteChanged += (_, _) => raised++;
+
+        await sut.InitializeAsync();
+
+        Assert.True(sut.ShareCommand.CanExecute(null));
+        Assert.True(raised > 0);
+    }
+
+    [Fact]
+    public async Task ShareCommand_SwallowsShareFailure_AndLeavesStateUnchanged()
+    {
+        _shareMock
+            .Setup(s => s.ShareTextAsync(It.IsAny<string>(), It.IsAny<string>()))
+            .ThrowsAsync(new InvalidOperationException("no share"));
+        EventDetail detail = CreateDetail();
+        EventDetailViewModel sut = CreateLoadedSut(detail);
+
+        Exception? ex = await Record.ExceptionAsync(() => sut.ShareCommand.ExecuteAsync(null));
+
+        Assert.Null(ex);
+        Assert.Same(detail, sut.Detail);
+        Assert.False(sut.IsLoadError);
+        Assert.False(sut.IsBusy);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ShareCommand_DoesNotUseNavigation(bool fails)
+    {
+        if (fails)
+        {
+            _shareMock
+                .Setup(s => s.ShareTextAsync(It.IsAny<string>(), It.IsAny<string>()))
+                .ThrowsAsync(new InvalidOperationException("no share"));
+        }
+        EventDetailViewModel sut = CreateLoadedSut(CreateDetail());
+
+        await sut.ShareCommand.ExecuteAsync(null);
+
+        _navMock.VerifyNoOtherCalls();
+    }
 
     [Fact]
     public async Task GoBackCommand_NavigatesBack()
