@@ -858,6 +858,295 @@ public class EventDetailViewModelTests
         Assert.False(sut.HasAttendanceShare);
     }
 
+    private static EventDetail DetailWithAttendance(int attendees, int expected)
+    {
+        EventDetail detail = CreateDetail();
+        detail.AttendeeCount = attendees;
+        detail.ExpectedAtendees = expected;
+        return detail;
+    }
+
+    [Fact]
+    public void AttendanceShare_QC1_Reads75Percent_For300Of400()
+    {
+        EventDetailViewModel sut = CreateSut();
+
+        sut.Detail = DetailWithAttendance(300, 400);
+
+        Assert.Equal("Attendance: 75% of expected", sut.AttendanceShareDisplay);
+        Assert.True(sut.HasAttendanceShare);
+    }
+
+    [Fact]
+    public void AttendanceShare_QC2_RoundsDown_NotToNearest()
+    {
+        EventDetailViewModel sut = CreateSut();
+
+        sut.Detail = DetailWithAttendance(1, 3);
+        Assert.Equal("Attendance: 33% of expected", sut.AttendanceShareDisplay);
+
+        sut.Detail = DetailWithAttendance(2, 3);
+        Assert.Equal("Attendance: 66% of expected", sut.AttendanceShareDisplay);
+
+        sut.Detail = DetailWithAttendance(399, 400);
+        Assert.Equal("Attendance: 99% of expected", sut.AttendanceShareDisplay);
+    }
+
+    [Fact]
+    public void AttendanceShare_QC3_Reads0Percent_ForZeroAttendeesWithPositiveExpected()
+    {
+        EventDetailViewModel sut = CreateSut();
+
+        sut.Detail = DetailWithAttendance(0, 400);
+
+        Assert.Equal("Attendance: 0% of expected", sut.AttendanceShareDisplay);
+        Assert.True(sut.HasAttendanceShare);
+    }
+
+    [Fact]
+    public void AttendanceShare_QC4_Reads100Percent_ForSmallestPositiveExpected()
+    {
+        EventDetailViewModel sut = CreateSut();
+
+        sut.Detail = DetailWithAttendance(1, 1);
+
+        Assert.Equal("Attendance: 100% of expected", sut.AttendanceShareDisplay);
+        Assert.True(sut.HasAttendanceShare);
+    }
+
+    [Fact]
+    public void AttendanceShare_QC5_DoesNotOverflow_ForLargeCounts()
+    {
+        // 30,000,000 * 100 exceeds int.MaxValue, so the calculation must not be done in int.
+        EventDetailViewModel sut = CreateSut();
+
+        sut.Detail = DetailWithAttendance(30_000_000, 40_000_000);
+
+        Assert.Equal("Attendance: 75% of expected", sut.AttendanceShareDisplay);
+        Assert.True(sut.HasAttendanceShare);
+    }
+
+    [Theory]
+    [InlineData("ar-SA")]
+    [InlineData("fr-FR")]
+    public void AttendanceShare_QC6_DoesNotDependOnDeviceCulture(string cultureName)
+    {
+        CultureInfo original = CultureInfo.CurrentCulture;
+        CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo(cultureName);
+        try
+        {
+            EventDetailViewModel sut = CreateSut();
+
+            sut.Detail = DetailWithAttendance(300, 400);
+
+            Assert.Equal("Attendance: 75% of expected", sut.AttendanceShareDisplay);
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = original;
+        }
+    }
+
+    [Fact]
+    public void AttendanceShare_QC7_Reads120Percent_For480Of400_NotCapped()
+    {
+        EventDetailViewModel sut = CreateSut();
+
+        sut.Detail = DetailWithAttendance(480, 400);
+
+        Assert.Equal("Attendance: 120% of expected", sut.AttendanceShareDisplay);
+        Assert.True(sut.HasAttendanceShare);
+    }
+
+    [Theory]
+    [InlineData(401, 400, "Attendance: 100% of expected")]
+    [InlineData(799, 400, "Attendance: 199% of expected")]
+    public void AttendanceShare_QC8_JustOverExpected_RoundsDownAndIsNotCapped(int attendees, int expected, string text)
+    {
+        EventDetailViewModel sut = CreateSut();
+
+        sut.Detail = DetailWithAttendance(attendees, expected);
+
+        Assert.Equal(text, sut.AttendanceShareDisplay);
+        Assert.True(sut.HasAttendanceShare);
+    }
+
+    [Fact]
+    public void AttendanceShare_QC9_IsEmptyAndHidden_WhenNoEventIsSet()
+    {
+        EventDetailViewModel sut = CreateSut();
+
+        Assert.Equal(string.Empty, sut.AttendanceShareDisplay);
+        Assert.False(sut.HasAttendanceShare);
+    }
+
+    [Fact]
+    public void AttendanceShare_QC10_IsEmptyAndHidden_WhenExpectedIsExactlyZero()
+    {
+        EventDetailViewModel sut = CreateSut();
+
+        sut.Detail = DetailWithAttendance(10, 0);
+
+        Assert.Equal(string.Empty, sut.AttendanceShareDisplay);
+        Assert.False(sut.HasAttendanceShare);
+    }
+
+    [Fact]
+    public void AttendanceShare_QC11_IsEmptyAndHidden_WhenExpectedIsNegative()
+    {
+        EventDetailViewModel sut = CreateSut();
+
+        sut.Detail = DetailWithAttendance(10, -5);
+        Assert.Equal(string.Empty, sut.AttendanceShareDisplay);
+        Assert.False(sut.HasAttendanceShare);
+
+        sut.Detail = DetailWithAttendance(10, int.MinValue);
+        Assert.Equal(string.Empty, sut.AttendanceShareDisplay);
+        Assert.False(sut.HasAttendanceShare);
+    }
+
+    [Fact]
+    public void AttendanceShare_QC12_IsEmptyAndHidden_WhenDetailIsClearedAfterBeingLoaded()
+    {
+        EventDetailViewModel sut = CreateSut();
+        sut.Detail = DetailWithAttendance(300, 400);
+        Assert.Equal("Attendance: 75% of expected", sut.AttendanceShareDisplay);
+
+        sut.Detail = null;
+
+        Assert.Equal(string.Empty, sut.AttendanceShareDisplay);
+        Assert.False(sut.HasAttendanceShare);
+    }
+
+    [Fact]
+    public async Task AttendanceShare_QC13_IsEmptyAndHidden_WhenReloadReturnsNull()
+    {
+        SetupDetail(DetailWithAttendance(300, 400));
+        EventDetailViewModel sut = CreateSut();
+        sut.ApplyQueryAttributes(new Dictionary<string, object> { ["id"] = "evt-500" });
+        await sut.InitializeAsync();
+        Assert.Equal("Attendance: 75% of expected", sut.AttendanceShareDisplay);
+
+        SetupDetail(null);
+        await sut.InitializeAsync();
+
+        Assert.Equal(string.Empty, sut.AttendanceShareDisplay);
+        Assert.False(sut.HasAttendanceShare);
+    }
+
+    [Fact]
+    public async Task AttendanceShare_QC13_IsEmptyAndHidden_WhenReloadThrows()
+    {
+        SetupDetail(DetailWithAttendance(300, 400));
+        EventDetailViewModel sut = CreateSut();
+        sut.ApplyQueryAttributes(new Dictionary<string, object> { ["id"] = "evt-500" });
+        await sut.InitializeAsync();
+        Assert.Equal("Attendance: 75% of expected", sut.AttendanceShareDisplay);
+
+        _eventsMock
+            .Setup(e => e.GetEventDetailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new HttpRequestException("offline"));
+        await sut.InitializeAsync();
+
+        Assert.Equal(string.Empty, sut.AttendanceShareDisplay);
+        Assert.False(sut.HasAttendanceShare);
+    }
+
+    [Theory]
+    [InlineData("confirmed")]
+    [InlineData("draft")]
+    [InlineData("completed")]
+    [InlineData("cancelled")]
+    public void AttendanceShare_QC14_IsEmptyAndHidden_ForEveryStatus_WhenExpectedIsZero(string status)
+    {
+        EventDetail detail = DetailWithAttendance(10, 0);
+        detail.Status = status;
+        EventDetailViewModel sut = CreateSut();
+
+        sut.Detail = detail;
+
+        Assert.Equal(string.Empty, sut.AttendanceShareDisplay);
+        Assert.False(sut.HasAttendanceShare);
+    }
+
+    [Fact]
+    public void AttendanceShare_QC15_BothPropertiesNotify_WhenDetailIsSet()
+    {
+        EventDetailViewModel sut = CreateSut();
+        List<string?> raised = [];
+        sut.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+
+        sut.Detail = DetailWithAttendance(300, 400);
+
+        Assert.Contains(nameof(EventDetailViewModel.AttendanceShareDisplay), raised);
+        Assert.Contains(nameof(EventDetailViewModel.HasAttendanceShare), raised);
+    }
+
+    [Fact]
+    public void AttendanceShare_QC16_BothPropertiesNotify_WhenDetailIsCleared()
+    {
+        EventDetailViewModel sut = CreateLoadedSut(DetailWithAttendance(300, 400));
+        List<string?> raised = [];
+        sut.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+
+        sut.Detail = null;
+
+        Assert.Contains(nameof(EventDetailViewModel.AttendanceShareDisplay), raised);
+        Assert.Contains(nameof(EventDetailViewModel.HasAttendanceShare), raised);
+        Assert.Equal(string.Empty, sut.AttendanceShareDisplay);
+        Assert.False(sut.HasAttendanceShare);
+    }
+
+    [Fact]
+    public void AttendanceShare_QC17_RefreshesText_WhenDetailIsReplacedWithAnotherEvent()
+    {
+        EventDetailViewModel sut = CreateLoadedSut(DetailWithAttendance(300, 400));
+        List<string?> raised = [];
+        sut.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+
+        sut.Detail = DetailWithAttendance(480, 400);
+
+        Assert.Contains(nameof(EventDetailViewModel.AttendanceShareDisplay), raised);
+        Assert.Contains(nameof(EventDetailViewModel.HasAttendanceShare), raised);
+        Assert.Equal("Attendance: 120% of expected", sut.AttendanceShareDisplay);
+    }
+
+    [Fact]
+    public void AttendanceShare_QC18_HidesLine_WhenReplacedWithEventWhoseExpectedIsZero()
+    {
+        EventDetailViewModel sut = CreateLoadedSut(DetailWithAttendance(300, 400));
+        List<string?> raised = [];
+        sut.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+
+        sut.Detail = DetailWithAttendance(300, 0);
+
+        Assert.False(sut.HasAttendanceShare);
+        Assert.Equal(string.Empty, sut.AttendanceShareDisplay);
+        Assert.Contains(nameof(EventDetailViewModel.AttendanceShareDisplay), raised);
+        Assert.Contains(nameof(EventDetailViewModel.HasAttendanceShare), raised);
+    }
+
+    [Fact]
+    public async Task AttendanceShare_QC19_RefreshesText_AndNotifies_WhenInitializeAsyncReloads()
+    {
+        SetupDetail(DetailWithAttendance(300, 400));
+        EventDetailViewModel sut = CreateSut();
+        sut.ApplyQueryAttributes(new Dictionary<string, object> { ["id"] = "evt-500" });
+        await sut.InitializeAsync();
+        Assert.Equal("Attendance: 75% of expected", sut.AttendanceShareDisplay);
+
+        SetupDetail(DetailWithAttendance(480, 400));
+        List<string?> raised = [];
+        sut.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+
+        await sut.InitializeAsync();
+
+        Assert.Equal("Attendance: 120% of expected", sut.AttendanceShareDisplay);
+        Assert.True(sut.HasAttendanceShare);
+        Assert.Contains(nameof(EventDetailViewModel.AttendanceShareDisplay), raised);
+        Assert.Contains(nameof(EventDetailViewModel.HasAttendanceShare), raised);
+    }
+
     // ── Query attributes + InitializeAsync ────────────────────────────────────
 
     [Fact]
