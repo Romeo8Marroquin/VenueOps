@@ -112,11 +112,23 @@
              ════════════════════════════════════════════════════════ -->
         <Grid
             Grid.Row="0"
-            ColumnDefinitions="*,Auto"
+            ColumnDefinitions="*,Auto,Auto"
+            ColumnSpacing="8"
             Padding="16,10,16,8"
             BackgroundColor="{AppThemeBinding
                 Light={StaticResource BackgroundLight},
                 Dark={StaticResource BackgroundDark}}">
+
+            <Button
+                Grid.Column="2"
+                Text="Share"
+                Command="{Binding ShareCommand}"
+                SemanticProperties.Description="Share event"
+                Style="{StaticResource OutlineButton}"
+                FontSize="13"
+                Padding="16,6"
+                MinimumHeightRequest="36"
+                VerticalOptions="Center"/>
 
             <HorizontalStackLayout Grid.Column="0" Spacing="10" VerticalOptions="Center">
 
