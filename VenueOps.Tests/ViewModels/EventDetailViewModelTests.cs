@@ -1024,6 +1024,287 @@ public class EventDetailViewModelTests
         Assert.Contains("Version=\"12.0.3\"", matches[0].Value);
     }
 
+    private static string BuildJsonFor(EventDetail detail) => EventDetailViewModel.BuildJson(detail);
+
+    private static string IsoUtc(DateTime utc) => utc.ToString("yyyy-MM-dd'T'HH:mm:ss'Z'", CultureInfo.InvariantCulture);
+
+    private static IEnumerable<string> AllPropertyNames(System.Text.Json.JsonElement element)
+    {
+        if (element.ValueKind == System.Text.Json.JsonValueKind.Object)
+        {
+            foreach (System.Text.Json.JsonProperty property in element.EnumerateObject())
+            {
+                yield return property.Name;
+                foreach (string nested in AllPropertyNames(property.Value))
+                    yield return nested;
+            }
+        }
+        else if (element.ValueKind == System.Text.Json.JsonValueKind.Array)
+        {
+            foreach (System.Text.Json.JsonElement item in element.EnumerateArray())
+                foreach (string nested in AllPropertyNames(item))
+                    yield return nested;
+        }
+    }
+
+    // Leading spaces of the single line that contains the token.
+    private static int IndentOf(string json, string token)
+    {
+        string line = json.Split('\n').Single(l => l.Contains(token, StringComparison.Ordinal));
+        return line.Length - line.TrimStart().Length;
+    }
+
+    [Fact]
+    public async Task CopyAsJsonCommand_CopiesEveryPropertyOfTheLoadedEvent_AsIndentedJson()
+    {
+        EventDetailViewModel sut = CreateLoadedSut(CreateFullDetail());
+        List<string> copied = [];
+        _clipboardMock.Setup(c => c.SetTextAsync(It.IsAny<string>()))
+            .Callback<string>(copied.Add)
+            .Returns(Task.CompletedTask);
+
+        await sut.CopyAsJsonCommand.ExecuteAsync(null);
+
+        _clipboardMock.Verify(c => c.SetTextAsync(It.IsAny<string>()), Times.Once);
+        string json = Assert.Single(copied);
+        Assert.Contains("\n", json);
+
+        using var doc = System.Text.Json.JsonDocument.Parse(json);
+        System.Text.Json.JsonElement root = doc.RootElement;
+        Assert.Equal(
+            _expectedTopLevelNames.OrderBy(n => n, StringComparer.Ordinal),
+            root.EnumerateObject().Select(p => p.Name).OrderBy(n => n, StringComparer.Ordinal));
+        Assert.Equal("evt-500", root.GetProperty("id").GetString());
+        Assert.Equal("Aurora Night Market", root.GetProperty("eventName").GetString());
+        Assert.Equal("Canal Yard", root.GetProperty("venueName").GetString());
+        Assert.Equal("confirmed", root.GetProperty("status").GetString());
+        Assert.Equal("2030-01-15T18:30:00Z", root.GetProperty("startDateUtc").GetString());
+        Assert.Equal("2030-06-01T11:30:00Z", root.GetProperty("endDateUtc").GetString());
+        Assert.Equal(1200, root.GetProperty("expectedAtendees").GetInt32());
+        Assert.Equal(1180, root.GetProperty("attendeeCount").GetInt32());
+        Assert.Equal("BK-0500", root.GetProperty("bookingReference").GetString());
+        Assert.Equal("Fictional street food and music.", root.GetProperty("shortDescription").GetString());
+        Assert.Equal(3, root.GetProperty("images").GetArrayLength());
+        Assert.Equal("3 Example Quay", root.GetProperty("location").GetProperty("formattedAddress").GetString());
+        Assert.Equal("Night Markets Ltd", root.GetProperty("organizer").GetProperty("name").GetString());
+        Assert.Equal(2, root.GetProperty("tags").GetArrayLength());
+        Assert.Equal(1, root.GetProperty("links").GetArrayLength());
+    }
+
+    [Fact]
+    public void BuildJson_IsIndented_WithNestedMembersIndentedOneLevelDeeper()
+    {
+        string json = BuildJsonFor(CreateFullDetail());
+
+        Assert.Equal(2, IndentOf(json, "\"location\""));
+        Assert.Equal(4, IndentOf(json, "\"formattedAddress\""));
+        Assert.Equal(4, IndentOf(json, "\"coordinates\""));
+        Assert.Equal(6, IndentOf(json, "\"latitude\""));
+    }
+
+    [Fact]
+    public void BuildJson_WritesEveryPropertyNameInCamelCase_AtEveryLevel()
+    {
+        using var doc = System.Text.Json.JsonDocument.Parse(BuildJsonFor(CreateFullDetail()));
+        List<string> names = AllPropertyNames(doc.RootElement).ToList();
+
+        Assert.All(
+            new[] { "altText", "credit", "url", "formattedAddress", "latitude", "longitude", "name", "websiteUrl", "label" },
+            expected => Assert.Contains(expected, names));
+        Assert.All(names, name => Assert.True(char.IsLower(name[0]), $"'{name}' is not camelCase"));
+        Assert.DoesNotContain("EventName", names);
+    }
+
+    [Fact]
+    public void BuildJson_WritesStartAndEndDates_AsIso8601WithZSuffix()
+    {
+        using var doc = System.Text.Json.JsonDocument.Parse(BuildJsonFor(CreateFullDetail()));
+
+        Assert.Equal("2030-01-15T18:30:00Z", doc.RootElement.GetProperty("startDateUtc").GetString());
+        Assert.Equal("2030-06-01T11:30:00Z", doc.RootElement.GetProperty("endDateUtc").GetString());
+    }
+
+    [Theory]
+    [InlineData("de-DE")]
+    [InlineData("th-TH")]
+    [InlineData("ar-SA")]
+    public void BuildJson_WritesTheSameIsoUtcDates_InEveryCulture(string cultureName)
+    {
+        CultureInfo original = CultureInfo.CurrentCulture;
+        CultureInfo.CurrentCulture = new CultureInfo(cultureName);
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(BuildJsonFor(CreateFullDetail()));
+
+            Assert.Equal("2030-01-15T18:30:00Z", doc.RootElement.GetProperty("startDateUtc").GetString());
+            Assert.Equal("2030-06-01T11:30:00Z", doc.RootElement.GetProperty("endDateUtc").GetString());
+        }
+        finally { CultureInfo.CurrentCulture = original; }
+    }
+
+    [Fact]
+    public void BuildJson_WritesALocalKindDate_AsTheSameUtcInstant()
+    {
+        var local = new DateTime(2030, 1, 15, 18, 30, 0, DateTimeKind.Local);
+        EventDetail detail = CreateFullDetail();
+        detail.StartDateUtc = local;
+        Assert.Equal(DateTimeKind.Local, detail.StartDateUtc.Kind);
+
+        using var doc = System.Text.Json.JsonDocument.Parse(BuildJsonFor(detail));
+
+        Assert.Equal(IsoUtc(local.ToUniversalTime()), doc.RootElement.GetProperty("startDateUtc").GetString());
+    }
+
+    [Fact]
+    public void BuildJson_WritesAnUnspecifiedKindDate_WithAZSuffix()
+    {
+        EventDetail detail = CreateFullDetail();
+        detail.StartDateUtc = new DateTime(2030, 1, 15, 18, 30, 0, DateTimeKind.Unspecified);
+
+        using var doc = System.Text.Json.JsonDocument.Parse(BuildJsonFor(detail));
+
+        Assert.Matches(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$", doc.RootElement.GetProperty("startDateUtc").GetString()!);
+    }
+
+    [Fact]
+    public void BuildJson_StillWritesEveryProperty_WhenOptionalMembersAreNullOrEmpty()
+    {
+        EventDetail detail = CreateFullDetail();
+        detail.Location = null;
+        detail.Organizer = new EventOrganizer { Name = "Night Markets Ltd", WebsiteUrl = null };
+        detail.Images = [];
+        detail.Tags = [];
+        detail.Links = [];
+
+        using var doc = System.Text.Json.JsonDocument.Parse(BuildJsonFor(detail));
+        System.Text.Json.JsonElement root = doc.RootElement;
+
+        Assert.Equal(
+            _expectedTopLevelNames.OrderBy(n => n, StringComparer.Ordinal),
+            root.EnumerateObject().Select(p => p.Name).OrderBy(n => n, StringComparer.Ordinal));
+        Assert.Equal(System.Text.Json.JsonValueKind.Null, root.GetProperty("location").ValueKind);
+        Assert.Equal(
+            System.Text.Json.JsonValueKind.Null,
+            root.GetProperty("organizer").GetProperty("websiteUrl").ValueKind);
+        Assert.Equal(0, root.GetProperty("images").GetArrayLength());
+        Assert.Equal(0, root.GetProperty("tags").GetArrayLength());
+        Assert.Equal(0, root.GetProperty("links").GetArrayLength());
+    }
+
+    [Fact]
+    public void BuildJson_WritesNullTagsAndLinks_WithoutThrowing()
+    {
+        EventDetail detail = CreateFullDetail();
+        detail.Tags = null!;
+        detail.Links = null!;
+
+        string json = BuildJsonFor(detail); // throws if the payload breaks serialization
+
+        using var doc = System.Text.Json.JsonDocument.Parse(json);
+        Assert.Equal(System.Text.Json.JsonValueKind.Null, doc.RootElement.GetProperty("tags").ValueKind);
+        Assert.Equal(System.Text.Json.JsonValueKind.Null, doc.RootElement.GetProperty("links").ValueKind);
+    }
+
+    [Fact]
+    public async Task CopyAsJsonCommand_SurfacesClipboardFailure_AndLeavesTheLoadedEventUnchanged()
+    {
+        EventDetail detail = CreateFullDetail();
+        EventDetailViewModel sut = CreateLoadedSut(detail);
+        _clipboardMock.Setup(c => c.SetTextAsync(It.IsAny<string>()))
+            .ThrowsAsync(new InvalidOperationException("clipboard unavailable"));
+
+        Exception? ex = await Record.ExceptionAsync(() => sut.CopyAsJsonCommand.ExecuteAsync(null));
+
+        Assert.IsType<InvalidOperationException>(ex);
+        Assert.Same(detail, sut.Detail);
+        Assert.False(sut.IsLoadError);
+        Assert.True(sut.CopyAsJsonCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task CopyAsJsonCommand_CopiesIdenticalJson_OnEveryExecution()
+    {
+        EventDetail detail = CreateFullDetail();
+        string expected = BuildJsonFor(detail);
+        EventDetailViewModel sut = CreateLoadedSut(detail);
+        _clipboardMock.Setup(c => c.SetTextAsync(It.IsAny<string>())).Returns(Task.CompletedTask);
+
+        await sut.CopyAsJsonCommand.ExecuteAsync(null);
+        await sut.CopyAsJsonCommand.ExecuteAsync(null);
+
+        _clipboardMock.Verify(c => c.SetTextAsync(expected), Times.Exactly(2));
+        _clipboardMock.Verify(c => c.SetTextAsync(It.IsAny<string>()), Times.Exactly(2));
+    }
+
+    [Fact]
+    public async Task CopyAsJsonCommand_CopiesTheEventCurrentlyLoaded_AfterDetailIsReplaced()
+    {
+        EventDetail first = CreateFullDetail();
+        first.Id = "evt-a";
+        first.EventName = "Harbour Lights";
+        EventDetail second = CreateFullDetail();
+        second.Id = "evt-b";
+        second.EventName = "Glasshouse Gala";
+        EventDetailViewModel sut = CreateLoadedSut(first);
+        List<string> copied = [];
+        _clipboardMock.Setup(c => c.SetTextAsync(It.IsAny<string>()))
+            .Callback<string>(copied.Add)
+            .Returns(Task.CompletedTask);
+
+        await sut.CopyAsJsonCommand.ExecuteAsync(null);
+        sut.Detail = second;
+        await sut.CopyAsJsonCommand.ExecuteAsync(null);
+
+        Assert.Equal(2, copied.Count);
+        Assert.Equal(BuildJsonFor(first), copied[0]);
+        Assert.Equal(BuildJsonFor(second), copied[1]);
+        Assert.Contains("Harbour Lights", copied[0]);
+        Assert.DoesNotContain("Harbour Lights", copied[1]);
+        Assert.DoesNotContain("evt-a", copied[1]);
+    }
+
+    [Fact]
+    public async Task CopyAsJsonCommand_IsDisabledAndCopiesNothing_AfterTheServiceThrowsOnLoad()
+    {
+        _eventsMock
+            .Setup(e => e.GetEventDetailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new HttpRequestException("offline"));
+        EventDetailViewModel sut = CreateSut();
+        sut.ApplyQueryAttributes(new Dictionary<string, object> { ["id"] = "evt-500" });
+
+        await sut.InitializeAsync();
+
+        Assert.True(sut.IsLoadError);
+        Assert.False(sut.CopyAsJsonCommand.CanExecute(null));
+        await sut.CopyAsJsonCommand.ExecuteAsync(null);
+        _clipboardMock.Verify(c => c.SetTextAsync(It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task CopyAsJsonCommand_IsDisabledWhileAReloadIsPending_AndEnabledOnceTheEventLoads()
+    {
+        SetupDetail(CreateFullDetail());
+        EventDetailViewModel sut = CreateSut();
+        sut.ApplyQueryAttributes(new Dictionary<string, object> { ["id"] = "evt-500" });
+        await sut.InitializeAsync();
+        Assert.True(sut.CopyAsJsonCommand.CanExecute(null));
+
+        var pending = new TaskCompletionSource<EventDetail?>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _eventsMock
+            .Setup(e => e.GetEventDetailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns(pending.Task);
+
+        Task reload = sut.InitializeAsync();
+
+        Assert.Null(sut.Detail);
+        Assert.False(sut.CopyAsJsonCommand.CanExecute(null));
+
+        pending.SetResult(CreateFullDetail());
+        await reload;
+
+        Assert.True(sut.CopyAsJsonCommand.CanExecute(null));
+    }
+
     // ── Commands ──────────────────────────────────────────────────────────────
 
     [Fact]
