@@ -1,5 +1,8 @@
 using System.Globalization;
+using System.Text.RegularExpressions;
+using System.Xml.Linq;
 using Moq;
+using Newtonsoft.Json.Linq;
 using VenueOps.Models.Events;
 using VenueOps.Services;
 using VenueOps.ViewModels;
@@ -1070,5 +1073,425 @@ public class EventDetailViewModelTests
 
         Assert.True(sut.CopyAsJsonCommand.CanExecute(null));
         Assert.True(raised > 0);
+    }
+
+    // ── Copy as JSON: packages, shape, names, dates, culture, command behaviour ──
+
+    private const string IsoUtcPattern = @"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,7})?Z$";
+
+    private static string FindAppProjectPath()
+    {
+        string? dir = AppContext.BaseDirectory;
+        while (dir is not null)
+        {
+            string candidate = Path.Combine(dir, "VenueOps", "VenueOps.csproj");
+            if (File.Exists(candidate)) return candidate;
+            dir = Path.GetDirectoryName(dir);
+        }
+        throw new FileNotFoundException("VenueOps/VenueOps.csproj was not found above the test output folder.");
+    }
+
+    private static string CamelCase(string pascal) => char.ToLowerInvariant(pascal[0]) + pascal[1..];
+
+    private static List<string> CamelCaseNamesOf(Type type) =>
+        type.GetProperties().Select(p => CamelCase(p.Name)).OrderBy(n => n, StringComparer.Ordinal).ToList();
+
+    private static List<string> PropertyNamesOf(JObject obj) =>
+        obj.Properties().Select(p => p.Name).OrderBy(n => n, StringComparer.Ordinal).ToList();
+
+    // Reads the raw text of a date property. JObject.Parse would turn it into a DateTime, hiding its format.
+    private static string RawDateValue(string json, string propertyName)
+    {
+        var match = Regex.Match(json, $"\"{propertyName}\": \"([^\"]*)\"");
+        Assert.True(match.Success, $"'{propertyName}' is not written as a string.");
+        return match.Groups[1].Value;
+    }
+
+    private static void WithCurrentCulture(CultureInfo culture, Action assert)
+    {
+        CultureInfo original = CultureInfo.CurrentCulture;
+        CultureInfo.CurrentCulture = culture;
+        try { assert(); }
+        finally { CultureInfo.CurrentCulture = original; }
+    }
+
+    [Fact]
+    public void AppProject_PackageAndProjectReferences_AreExactlyTheKnownSet()
+    {
+        XDocument project = XDocument.Load(FindAppProjectPath());
+
+        List<string> actual = project.Descendants("PackageReference")
+            .Select(e => $"{(string?)e.Attribute("Include")}@{(string?)e.Attribute("Version")}")
+            .OrderBy(s => s, StringComparer.Ordinal)
+            .ToList();
+        List<string> expected = new List<string>
+        {
+            "CommunityToolkit.Maui@14.1.0",
+            "CommunityToolkit.Mvvm@8.4.2",
+            "Microsoft.Extensions.Http@10.0.6",
+            "Microsoft.Maui.Controls@$(MauiVersion)",
+            "Microsoft.Extensions.Logging.Debug@10.0.0",
+            "Newtonsoft.Json@12.0.3",
+            "SonarAnalyzer.CSharp@10.35.0.4138"
+        }.OrderBy(s => s, StringComparer.Ordinal).ToList();
+
+        Assert.Equal(expected, actual);
+        Assert.Empty(project.Descendants("ProjectReference"));
+        Assert.Equal("10.0.51", project.Descendants("MauiVersion").Single().Value);
+    }
+
+    [Fact]
+    public async Task CopyAsJsonCommand_CopiesIndentedCamelCaseJsonOfTheLoadedEvent()
+    {
+        EventDetail detail = CreateDetail();
+        string? copied = null;
+        _clipboardMock
+            .Setup(c => c.SetTextAsync(It.IsAny<string>()))
+            .Callback<string>(text => copied = text)
+            .Returns(Task.CompletedTask);
+        EventDetailViewModel sut = CreateLoadedSut(detail);
+
+        await sut.CopyAsJsonCommand.ExecuteAsync(null);
+
+        Assert.NotNull(copied);
+        Assert.Equal(EventDetailViewModel.BuildEventJson(detail), copied);
+        Assert.Contains("\n  \"eventName\": \"Aurora Night Market\"", copied);
+        Assert.Contains("\"expectedAtendees\": 1200", copied);
+    }
+
+    [Fact]
+    public void BuildEventJson_IndentsNestedPropertiesByTwoSpacesPerLevel()
+    {
+        string json = EventDetailViewModel.BuildEventJson(CreateDetail());
+
+        Assert.Contains("\n    \"formattedAddress\": \"3 Example Quay\"", json);
+    }
+
+    [Fact]
+    public void BuildEventJson_WritesEveryEventDetailPropertyWithCamelCaseNames()
+    {
+        JObject obj = JObject.Parse(EventDetailViewModel.BuildEventJson(CreateDetail()));
+
+        Assert.Equal(CamelCaseNamesOf(typeof(EventDetail)), PropertyNamesOf(obj));
+        Assert.Contains("expectedAtendees", PropertyNamesOf(obj));
+        Assert.DoesNotContain("expectedAttendees", PropertyNamesOf(obj));
+        Assert.Contains("attendeeCount", PropertyNamesOf(obj));
+    }
+
+    [Fact]
+    public void BuildEventJson_WritesNestedObjectsWithCamelCaseNames()
+    {
+        JObject obj = JObject.Parse(EventDetailViewModel.BuildEventJson(CreateDetail()));
+
+        Assert.Equal(CamelCaseNamesOf(typeof(EventImage)), PropertyNamesOf((JObject)obj["images"]![0]!));
+        Assert.Equal(CamelCaseNamesOf(typeof(EventLocation)), PropertyNamesOf((JObject)obj["location"]!));
+        Assert.Equal(CamelCaseNamesOf(typeof(EventOrganizer)), PropertyNamesOf((JObject)obj["organizer"]!));
+        Assert.Equal(CamelCaseNamesOf(typeof(EventLink)), PropertyNamesOf((JObject)obj["links"]![0]!));
+        Assert.DoesNotContain(obj.Descendants().OfType<JProperty>().Select(p => p.Name), n => char.IsUpper(n[0]));
+    }
+
+    [Fact]
+    public void BuildEventJson_WritesEndDateAsIso8601Utc()
+    {
+        EventDetail detail = CreateDetail();
+        detail.EndDateUtc = new DateTime(2025, 3, 4, 5, 6, 7, DateTimeKind.Utc);
+
+        string json = EventDetailViewModel.BuildEventJson(detail);
+
+        Assert.Contains("\"endDateUtc\": \"2025-03-04T05:06:07Z\"", json);
+    }
+
+    [Fact]
+    public void BuildEventJson_WritesLocalDateAsTheSameInstantInUtc()
+    {
+        // The app runs in the host's time zone; the instant is only shifted when the host is not on UTC.
+        EventDetail detail = CreateDetail();
+        DateTime local = new(2025, 3, 4, 5, 6, 7, DateTimeKind.Local);
+        detail.EndDateUtc = local;
+
+        string written = RawDateValue(EventDetailViewModel.BuildEventJson(detail), "endDateUtc");
+
+        Assert.EndsWith("Z", written);
+        Assert.Equal(local.ToUniversalTime(), DateTimeOffset.Parse(written, CultureInfo.InvariantCulture).UtcDateTime);
+    }
+
+    [Fact]
+    public void BuildEventJson_WritesUnspecifiedDateAsIso8601EndingInZ()
+    {
+        // The criterion does not say whether the clock value is kept or shifted, only that the text ends in Z.
+        EventDetail detail = CreateDetail();
+        detail.StartDateUtc = new DateTime(2025, 3, 4, 5, 6, 7, DateTimeKind.Unspecified);
+
+        string written = RawDateValue(EventDetailViewModel.BuildEventJson(detail), "startDateUtc");
+
+        Assert.Matches(IsoUtcPattern, written);
+    }
+
+    [Fact]
+    public void BuildEventJson_WritesFractionalSecondsAsIso8601Utc()
+    {
+        // The criterion does not say whether the fraction is kept or truncated; the instant must be unchanged.
+        EventDetail detail = CreateDetail();
+        DateTime start = new(2025, 3, 4, 5, 6, 7, 500, DateTimeKind.Utc);
+        detail.StartDateUtc = start;
+
+        string written = RawDateValue(EventDetailViewModel.BuildEventJson(detail), "startDateUtc");
+
+        Assert.Matches(IsoUtcPattern, written);
+        Assert.Equal(start, DateTimeOffset.Parse(written, CultureInfo.InvariantCulture).UtcDateTime);
+    }
+
+    [Fact]
+    public void BuildEventJson_DatesMatchTheIso8601UtcPattern()
+    {
+        string json = EventDetailViewModel.BuildEventJson(CreateDetail());
+
+        Assert.Matches(IsoUtcPattern, RawDateValue(json, "startDateUtc"));
+        Assert.Matches(IsoUtcPattern, RawDateValue(json, "endDateUtc"));
+    }
+
+    [Fact]
+    public void BuildEventJson_KeepsEveryPropertyAndWritesEmptySectionsAsNullOrEmptyArrays()
+    {
+        EventDetail detail = CreateDetail();
+        detail.Location = null;
+        detail.Organizer = null;
+        detail.Images = [];
+        detail.Tags = [];
+        detail.Links = [];
+
+        JObject obj = JObject.Parse(EventDetailViewModel.BuildEventJson(detail));
+
+        Assert.Equal(CamelCaseNamesOf(typeof(EventDetail)), PropertyNamesOf(obj));
+        Assert.Equal(JTokenType.Null, obj["location"]!.Type);
+        Assert.Equal(JTokenType.Null, obj["organizer"]!.Type);
+        Assert.Equal(JTokenType.Array, obj["images"]!.Type);
+        Assert.Empty((JArray)obj["images"]!);
+        Assert.Empty((JArray)obj["tags"]!);
+        Assert.Empty((JArray)obj["links"]!);
+    }
+
+    [Theory]
+    [InlineData("de-DE")]
+    [InlineData("ar-SA")]
+    public void BuildEventJson_DoesNotDependOnTheCurrentCulture(string cultureName)
+    {
+        EventDetail detail = CreateDetail();
+        string expected = string.Empty;
+        string actual = string.Empty;
+        WithCurrentCulture(CultureInfo.InvariantCulture, () => expected = EventDetailViewModel.BuildEventJson(detail));
+        WithCurrentCulture(new CultureInfo(cultureName), () => actual = EventDetailViewModel.BuildEventJson(detail));
+
+        Assert.Equal(expected, actual);
+        Assert.Contains("\"expectedAtendees\": 1200", actual);
+        Assert.Contains("\"startDateUtc\": \"2030-06-01T11:00:00Z\"", actual);
+    }
+
+    [Fact]
+    public async Task CopyAsJsonCommand_ClipboardFailure_IsSurfacedToTheCaller()
+    {
+        // The criterion does not state the failure behaviour. This records the actual one: the exception surfaces.
+        var failure = new InvalidOperationException("clipboard unavailable");
+        _clipboardMock.Setup(c => c.SetTextAsync(It.IsAny<string>())).ThrowsAsync(failure);
+        EventDetailViewModel sut = CreateLoadedSut(CreateDetail());
+
+        Exception? thrown = await Record.ExceptionAsync(() => sut.CopyAsJsonCommand.ExecuteAsync(null));
+
+        Assert.Same(failure, thrown);
+        Assert.True(sut.CopyAsJsonCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task CopyAsJsonCommand_RunTwiceInARow_CopiesTheFullJsonEachTime()
+    {
+        EventDetail detail = CreateDetail();
+        string expected = EventDetailViewModel.BuildEventJson(detail);
+        var copies = new List<string>();
+        _clipboardMock
+            .Setup(c => c.SetTextAsync(It.IsAny<string>()))
+            .Callback<string>(copies.Add)
+            .Returns(Task.CompletedTask);
+        EventDetailViewModel sut = CreateLoadedSut(detail);
+
+        await sut.CopyAsJsonCommand.ExecuteAsync(null);
+        await sut.CopyAsJsonCommand.ExecuteAsync(null);
+
+        Assert.Equal(new[] { expected, expected }, copies);
+    }
+
+    [Fact]
+    public async Task CopyAsJsonCommand_RunTwiceConcurrently_EveryCopiedTextIsTheFullJson()
+    {
+        // The criterion does not state how overlapping runs are guarded, so the number of copies is not asserted.
+        EventDetail detail = CreateDetail();
+        string expected = EventDetailViewModel.BuildEventJson(detail);
+        var gate = new TaskCompletionSource();
+        var copies = new List<string>();
+        _clipboardMock
+            .Setup(c => c.SetTextAsync(It.IsAny<string>()))
+            .Callback<string>(copies.Add)
+            .Returns(() => gate.Task);
+        EventDetailViewModel sut = CreateLoadedSut(detail);
+
+        Task first = sut.CopyAsJsonCommand.ExecuteAsync(null);
+        Task second = sut.CopyAsJsonCommand.ExecuteAsync(null);
+        gate.SetResult();
+        await Task.WhenAll(first, second);
+
+        Assert.NotEmpty(copies);
+        Assert.All(copies, text => Assert.Equal(expected, text));
+    }
+
+    [Fact]
+    public void CopyAsJsonCommand_IsDisabledWithNoEvent_AndRaisesChangeWhenAnEventIsLoaded()
+    {
+        EventDetailViewModel sut = CreateSut();
+        int raised = 0;
+        sut.CopyAsJsonCommand.CanExecuteChanged += (_, _) => raised++;
+
+        Assert.False(sut.CopyAsJsonCommand.CanExecute(null));
+
+        int before = raised;
+        sut.Detail = CreateDetail();
+
+        Assert.True(raised > before);
+        Assert.True(sut.CopyAsJsonCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task CopyAsJsonCommand_IsDisabled_WhenInitializeAsyncReturnsNull()
+    {
+        SetupDetail(CreateDetail());
+        EventDetailViewModel sut = CreateSut();
+        sut.ApplyQueryAttributes(new Dictionary<string, object> { ["id"] = "evt-500" });
+        await sut.InitializeAsync();
+        Assert.True(sut.CopyAsJsonCommand.CanExecute(null));
+
+        SetupDetail(null);
+        await sut.InitializeAsync();
+
+        Assert.False(sut.CopyAsJsonCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task CopyAsJsonCommand_IsDisabled_WhenInitializeAsyncThrows()
+    {
+        SetupDetail(CreateDetail());
+        EventDetailViewModel sut = CreateSut();
+        sut.ApplyQueryAttributes(new Dictionary<string, object> { ["id"] = "evt-500" });
+        await sut.InitializeAsync();
+        Assert.True(sut.CopyAsJsonCommand.CanExecute(null));
+
+        _eventsMock
+            .Setup(e => e.GetEventDetailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new HttpRequestException("offline"));
+        await sut.InitializeAsync();
+
+        Assert.False(sut.CopyAsJsonCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void CopyAsJsonCommand_IsDisabled_WhenDetailIsClearedDirectly()
+    {
+        EventDetailViewModel sut = CreateLoadedSut(CreateDetail());
+        Assert.True(sut.CopyAsJsonCommand.CanExecute(null));
+
+        sut.Detail = null;
+
+        Assert.False(sut.CopyAsJsonCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task CopyAsJsonCommand_ForcedExecutionWithNoEvent_CopiesNothing()
+    {
+        // The criterion does not state the outcome of a forced run; it must not copy a null or "null" text.
+        EventDetailViewModel sut = CreateSut();
+
+        await sut.CopyAsJsonCommand.ExecuteAsync(null);
+
+        _clipboardMock.Verify(c => c.SetTextAsync(It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public void CopyAsJsonCommand_RaisesCanExecuteChanged_WhenTheLoadedEventIsCleared()
+    {
+        EventDetailViewModel sut = CreateLoadedSut(CreateDetail());
+        Assert.True(sut.CopyAsJsonCommand.CanExecute(null));
+        int raised = 0;
+        sut.CopyAsJsonCommand.CanExecuteChanged += (_, _) => raised++;
+
+        sut.Detail = null;
+
+        Assert.False(sut.CopyAsJsonCommand.CanExecute(null));
+        Assert.True(raised > 0);
+    }
+
+    [Fact]
+    public async Task CopyAsJsonCommand_AfterTheEventIsReplaced_CopiesTheCurrentEventOnly()
+    {
+        EventDetail first = CreateDetail();
+        EventDetail second = CreateDetail();
+        second.Id = "evt-501";
+        second.EventName = "Harbour Lights Fair";
+        var copies = new List<string>();
+        _clipboardMock
+            .Setup(c => c.SetTextAsync(It.IsAny<string>()))
+            .Callback<string>(copies.Add)
+            .Returns(Task.CompletedTask);
+        EventDetailViewModel sut = CreateLoadedSut(first);
+
+        sut.Detail = second;
+        await sut.CopyAsJsonCommand.ExecuteAsync(null);
+
+        _clipboardMock.Verify(c => c.SetTextAsync(It.IsAny<string>()), Times.Once);
+        Assert.Single(copies);
+        Assert.Equal(EventDetailViewModel.BuildEventJson(second), copies[0]);
+        Assert.Contains("\"eventName\": \"Harbour Lights Fair\"", copies[0]);
+        Assert.DoesNotContain("Aurora Night Market", copies[0]);
+    }
+
+    [Fact]
+    public void BuildEventJson_WritesEmptyListsAsArraysAndEmptyBookingReferenceAsEmptyString()
+    {
+        EventDetail detail = CreateDetail();
+        detail.Images = [];
+        detail.Tags = [];
+        detail.Links = [];
+        detail.BookingReference = string.Empty;
+
+        JObject obj = JObject.Parse(EventDetailViewModel.BuildEventJson(detail));
+
+        Assert.Equal(CamelCaseNamesOf(typeof(EventDetail)), PropertyNamesOf(obj));
+        Assert.Equal(JTokenType.Array, obj["images"]!.Type);
+        Assert.Equal(JTokenType.Array, obj["tags"]!.Type);
+        Assert.Equal(JTokenType.Array, obj["links"]!.Type);
+        Assert.Empty((JArray)obj["images"]!);
+        Assert.Empty((JArray)obj["tags"]!);
+        Assert.Empty((JArray)obj["links"]!);
+        Assert.Equal(JTokenType.String, obj["bookingReference"]!.Type);
+        Assert.Equal(string.Empty, (string?)obj["bookingReference"]);
+    }
+
+    [Fact]
+    public async Task CopyAsJsonCommand_IsDisabledDuringReload_AndEnabledAfterTheEventLoads()
+    {
+        SetupDetail(CreateDetail());
+        EventDetailViewModel sut = CreateSut();
+        sut.ApplyQueryAttributes(new Dictionary<string, object> { ["id"] = "evt-500" });
+        await sut.InitializeAsync();
+        Assert.True(sut.CopyAsJsonCommand.CanExecute(null));
+
+        var pending = new TaskCompletionSource<EventDetail?>();
+        _eventsMock
+            .Setup(e => e.GetEventDetailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns(pending.Task);
+
+        Task reload = sut.InitializeAsync();
+        Assert.False(sut.CopyAsJsonCommand.CanExecute(null));
+
+        pending.SetResult(CreateDetail());
+        await reload;
+
+        Assert.True(sut.CopyAsJsonCommand.CanExecute(null));
     }
 }
