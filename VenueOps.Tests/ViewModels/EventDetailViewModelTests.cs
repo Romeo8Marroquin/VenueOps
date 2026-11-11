@@ -1,4 +1,8 @@
 using System.Globalization;
+using System.Reflection;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using System.Xml.Linq;
 using Moq;
 using VenueOps.Models.Events;
 using VenueOps.Services;
@@ -915,6 +919,339 @@ public class EventDetailViewModelTests
     }
 
     // ── Copy as JSON ──────────────────────────────────────────────────────────
+
+    private static XDocument LoadProjectXml() => XDocument.Load(FindProjectFile());
+
+    private static List<string> PackageNameAndVersions(XDocument project) =>
+        project.Descendants("PackageReference")
+            .Select(p => $"{(string?)p.Attribute("Include")}@{(string?)p.Attribute("Version")}")
+            .OrderBy(s => s, StringComparer.Ordinal)
+            .ToList();
+
+    private static void CollectPropertyNames(JsonElement element, List<string> names)
+    {
+        switch (element.ValueKind)
+        {
+            case JsonValueKind.Object:
+                foreach (JsonProperty property in element.EnumerateObject())
+                {
+                    names.Add(property.Name);
+                    CollectPropertyNames(property.Value, names);
+                }
+                break;
+            case JsonValueKind.Array:
+                foreach (JsonElement item in element.EnumerateArray())
+                    CollectPropertyNames(item, names);
+                break;
+        }
+    }
+
+    // QC1: the reference sits in the same ItemGroup as the other package references.
+    [Fact]
+    public void Project_NewtonsoftJsonIsInTheSamePackageItemGroupAsTheOtherPackages()
+    {
+        XDocument project = LoadProjectXml();
+        List<XElement> references = project.Descendants("PackageReference")
+            .Where(p => (string?)p.Attribute("Include") == "Newtonsoft.Json")
+            .ToList();
+
+        Assert.Single(references);
+        XElement group = references[0].Parent!;
+        Assert.Equal("ItemGroup", group.Name.LocalName);
+        Assert.Null(group.Attribute("Condition"));
+        Assert.Contains(group.Elements("PackageReference"), p => (string?)p.Attribute("Include") == "CommunityToolkit.Mvvm");
+        Assert.Equal("12.0.3", (string?)references[0].Attribute("Version"));
+    }
+
+    // QC2: Newtonsoft.Json has a literal version, and no other package line has changed.
+    [Fact]
+    public void Project_NewtonsoftJsonVersionIsALiteral_AndOtherPackagesAreUnchanged()
+    {
+        List<string> actual = PackageNameAndVersions(LoadProjectXml());
+
+        List<string> expected = new[]
+        {
+            "CommunityToolkit.Maui@14.1.0",
+            "CommunityToolkit.Mvvm@8.4.2",
+            "Microsoft.Extensions.Http@10.0.6",
+            "Microsoft.Maui.Controls@$(MauiVersion)",
+            "Microsoft.Extensions.Logging.Debug@10.0.0",
+            "Newtonsoft.Json@12.0.3",
+            "SonarAnalyzer.CSharp@10.35.0.4138"
+        }.OrderBy(s => s, StringComparer.Ordinal).ToList();
+
+        Assert.Equal(expected, actual);
+    }
+
+    // QC3: the command sends the indented event JSON to the clipboard exactly once.
+    [Fact]
+    public async Task CopyAsJsonCommand_SendsTheIndentedEventJsonToTheClipboardOnce()
+    {
+        List<string> copied = [];
+        _clipboardMock.Setup(c => c.SetTextAsync(It.IsAny<string>()))
+            .Callback<string>(t => copied.Add(t))
+            .Returns(Task.CompletedTask);
+        EventDetailViewModel sut = CreateLoadedSut(CreateFullJsonDetail());
+
+        await sut.CopyAsJsonCommand.ExecuteAsync(null);
+
+        Assert.Single(copied);
+        string text = copied[0];
+        Assert.Contains("\n  \"id\": \"evt-500\"", text.Replace("\r\n", "\n"));
+        using var doc = JsonDocument.Parse(text);
+        Assert.Equal("Aurora Night Market", doc.RootElement.GetProperty("eventName").GetString());
+        _clipboardMock.Verify(c => c.SetTextAsync(It.IsAny<string>()), Times.Once);
+        _clipboardMock.VerifyNoOtherCalls();
+    }
+
+    // QC4: names are camelCase at every level, and the output is indented.
+    [Fact]
+    public void BuildEventJson_UsesCamelCaseNamesAtEveryLevel_AndIsIndented()
+    {
+        string json = EventDetailViewModel.BuildEventJson(CreateFullJsonDetail());
+
+        Assert.Contains("\n    \"formattedAddress\"", json.Replace("\r\n", "\n"));
+        using var doc = JsonDocument.Parse(json);
+        List<string> names = [];
+        CollectPropertyNames(doc.RootElement, names);
+
+        Assert.All(names, n => Assert.True(char.IsLower(n[0]), $"'{n}' is not camelCase"));
+        Assert.Contains("formattedAddress", names);
+        Assert.Contains("latitude", names);
+        Assert.Contains("websiteUrl", names);
+        Assert.Contains("altText", names);
+        Assert.Contains("label", names);
+    }
+
+    // QC5: start and end are written in ISO 8601 UTC.
+    [Fact]
+    public void BuildEventJson_WritesStartAndEndDatesAsIso8601Utc()
+    {
+        string json = EventDetailViewModel.BuildEventJson(CreateFullJsonDetail());
+
+        using var doc = JsonDocument.Parse(json);
+        Assert.Equal("2030-05-01T18:30:00Z", doc.RootElement.GetProperty("startDateUtc").GetString());
+        Assert.Equal("2030-05-01T20:00:00Z", doc.RootElement.GetProperty("endDateUtc").GetString());
+    }
+
+    // QC6: every EventDetail property is written, including nulls and empty lists.
+    [Fact]
+    public void BuildEventJson_WritesEveryEventDetailProperty_WhenSectionsAreNullOrEmpty()
+    {
+        EventDetail detail = CreateFullJsonDetail();
+        detail.Location = null;
+        detail.Organizer = null;
+        detail.Tags = [];
+        detail.Links = [];
+        detail.Images = [];
+
+        using var doc = JsonDocument.Parse(EventDetailViewModel.BuildEventJson(detail));
+        JsonElement root = doc.RootElement;
+
+        string[] declared = typeof(EventDetail)
+            .GetProperties(BindingFlags.Public | BindingFlags.Instance)
+            .Select(p => p.GetCustomAttribute<JsonPropertyNameAttribute>()?.Name ?? p.Name)
+            .ToArray();
+        Assert.Equal(declared.Length, root.EnumerateObject().Count());
+        foreach (string name in declared)
+            Assert.True(root.TryGetProperty(name, out _), $"'{name}' is not written");
+
+        Assert.Equal(JsonValueKind.Null, root.GetProperty("location").ValueKind);
+        Assert.Equal(JsonValueKind.Null, root.GetProperty("organizer").ValueKind);
+        Assert.Equal(0, root.GetProperty("tags").GetArrayLength());
+        Assert.Equal(0, root.GetProperty("links").GetArrayLength());
+        Assert.Equal(0, root.GetProperty("images").GetArrayLength());
+    }
+
+    // QC7: an Unspecified date is read as UTC and is not shifted by the device offset.
+    [Fact]
+    public void BuildEventJson_TreatsAnUnspecifiedDateAsUtc_AndDoesNotShiftIt()
+    {
+        EventDetail detail = CreateFullJsonDetail();
+        detail.StartDateUtc = new DateTime(2030, 5, 1, 18, 30, 0, DateTimeKind.Unspecified);
+        detail.EndDateUtc = new DateTime(2030, 5, 1, 20, 0, 0, DateTimeKind.Unspecified);
+
+        using var doc = JsonDocument.Parse(EventDetailViewModel.BuildEventJson(detail));
+
+        Assert.Equal("2030-05-01T18:30:00Z", doc.RootElement.GetProperty("startDateUtc").GetString());
+        Assert.Equal("2030-05-01T20:00:00Z", doc.RootElement.GetProperty("endDateUtc").GetString());
+    }
+
+    // QC7: a Local date is written as the UTC instant it represents.
+    [Fact]
+    public void BuildEventJson_WritesALocalDateAsTheUtcInstantItRepresents()
+    {
+        EventDetail detail = CreateFullJsonDetail();
+        DateTime localStart = new(2030, 5, 1, 18, 30, 0, DateTimeKind.Local);
+        detail.StartDateUtc = localStart;
+        string expected = localStart.ToUniversalTime().ToString("yyyy-MM-dd'T'HH:mm:ss'Z'", CultureInfo.InvariantCulture);
+
+        using var doc = JsonDocument.Parse(EventDetailViewModel.BuildEventJson(detail));
+
+        Assert.Equal(expected, doc.RootElement.GetProperty("startDateUtc").GetString());
+    }
+
+    // QC9: each execution copies the detail that is loaded at that moment.
+    [Fact]
+    public async Task CopyAsJsonCommand_CopiesTheCurrentDetailOnEachExecution()
+    {
+        List<string> copied = [];
+        _clipboardMock.Setup(c => c.SetTextAsync(It.IsAny<string>()))
+            .Callback<string>(t => copied.Add(t))
+            .Returns(Task.CompletedTask);
+        EventDetail first = CreateFullJsonDetail();
+        EventDetail second = CreateFullJsonDetail();
+        second.Id = "evt-900";
+        second.EventName = "Harbour Lights Gala";
+        EventDetailViewModel sut = CreateLoadedSut(first);
+
+        await sut.CopyAsJsonCommand.ExecuteAsync(null);
+        sut.Detail = second;
+        await sut.CopyAsJsonCommand.ExecuteAsync(null);
+
+        Assert.Equal(2, copied.Count);
+        Assert.Contains("\"id\": \"evt-500\"", copied[0]);
+        Assert.Contains("\"id\": \"evt-900\"", copied[1]);
+        Assert.NotEqual(copied[0], copied[1]);
+        Assert.Equal(EventDetailViewModel.BuildEventJson(first), copied[0]);
+        Assert.Equal(EventDetailViewModel.BuildEventJson(second), copied[1]);
+        _clipboardMock.Verify(c => c.SetTextAsync(It.IsAny<string>()), Times.Exactly(2));
+    }
+
+    // QC10: a clipboard failure is observable on the returned task, and Detail is unchanged.
+    [Fact]
+    public async Task CopyAsJsonCommand_SurfacesAClipboardFailureOnItsTask_AndKeepsDetail()
+    {
+        _clipboardMock
+            .Setup(c => c.SetTextAsync(It.IsAny<string>()))
+            .ThrowsAsync(new InvalidOperationException("clipboard unavailable"));
+        EventDetail detail = CreateFullJsonDetail();
+        EventDetailViewModel sut = CreateLoadedSut(detail);
+
+        InvalidOperationException ex = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => sut.CopyAsJsonCommand.ExecuteAsync(null));
+
+        Assert.Equal("clipboard unavailable", ex.Message);
+        Assert.Same(detail, sut.Detail);
+    }
+
+    // QC12: the command becomes executable on load, and CanExecuteChanged is raised.
+    [Fact]
+    public async Task CopyAsJsonCommand_BecomesExecutable_AndNotifiesWhenAnEventIsLoaded()
+    {
+        SetupDetail(CreateFullJsonDetail());
+        EventDetailViewModel sut = CreateSut();
+        sut.ApplyQueryAttributes(new Dictionary<string, object> { ["id"] = "evt-500" });
+        List<bool> observed = [];
+        sut.CopyAsJsonCommand.CanExecuteChanged += (_, _) => observed.Add(sut.CopyAsJsonCommand.CanExecute(null));
+
+        await sut.InitializeAsync();
+
+        Assert.Contains(true, observed);
+        Assert.True(sut.CopyAsJsonCommand.CanExecute(null));
+    }
+
+    // QC13: the command disables again when a retry returns no event.
+    [Fact]
+    public async Task CopyAsJsonCommand_IsDisabled_WhenRetryReturnsNoEvent()
+    {
+        SetupDetail(CreateFullJsonDetail());
+        EventDetailViewModel sut = CreateSut();
+        sut.ApplyQueryAttributes(new Dictionary<string, object> { ["id"] = "evt-500" });
+        await sut.InitializeAsync();
+        Assert.True(sut.CopyAsJsonCommand.CanExecute(null));
+
+        SetupDetail(null);
+        await sut.RetryCommand.ExecuteAsync(null);
+
+        Assert.Null(sut.Detail);
+        Assert.False(sut.CopyAsJsonCommand.CanExecute(null));
+        await sut.CopyAsJsonCommand.ExecuteAsync(null);
+        _clipboardMock.Verify(c => c.SetTextAsync(It.IsAny<string>()), Times.Never);
+    }
+
+    // QC13: the command disables again when a retry throws.
+    [Fact]
+    public async Task CopyAsJsonCommand_IsDisabled_WhenRetryThrows()
+    {
+        SetupDetail(CreateFullJsonDetail());
+        EventDetailViewModel sut = CreateSut();
+        sut.ApplyQueryAttributes(new Dictionary<string, object> { ["id"] = "evt-500" });
+        await sut.InitializeAsync();
+        Assert.True(sut.CopyAsJsonCommand.CanExecute(null));
+
+        _eventsMock
+            .Setup(e => e.GetEventDetailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new HttpRequestException("offline"));
+        await sut.RetryCommand.ExecuteAsync(null);
+
+        Assert.Null(sut.Detail);
+        Assert.False(sut.CopyAsJsonCommand.CanExecute(null));
+    }
+
+    // QC13: the command disables again when Detail is cleared directly.
+    [Fact]
+    public void CopyAsJsonCommand_IsDisabled_WhenDetailIsClearedDirectly()
+    {
+        EventDetailViewModel sut = CreateLoadedSut(CreateFullJsonDetail());
+        Assert.True(sut.CopyAsJsonCommand.CanExecute(null));
+
+        sut.Detail = null;
+
+        Assert.False(sut.CopyAsJsonCommand.CanExecute(null));
+    }
+
+    // QC14: the command is disabled while a reload is in progress.
+    [Fact]
+    public async Task CopyAsJsonCommand_IsDisabled_WhileAReloadIsInProgress()
+    {
+        var reload = new TaskCompletionSource<EventDetail?>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _eventsMock
+            .Setup(e => e.GetEventDetailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns(reload.Task);
+        EventDetailViewModel sut = CreateLoadedSut(CreateFullJsonDetail());
+        sut.ApplyQueryAttributes(new Dictionary<string, object> { ["id"] = "evt-500" });
+
+        Task load = sut.InitializeAsync();
+
+        Assert.True(sut.IsBusy);
+        Assert.Null(sut.Detail);
+        Assert.False(sut.CopyAsJsonCommand.CanExecute(null));
+
+        reload.SetResult(CreateFullJsonDetail());
+        await load;
+
+        Assert.NotNull(sut.Detail);
+        Assert.True(sut.CopyAsJsonCommand.CanExecute(null));
+    }
+
+    // QC15: BuildEventJson is a static method of the view model, and writes expectedAtendees.
+    [Fact]
+    public void BuildEventJson_IsAStaticViewModelMethod_WritingTheExpectedAtendeesName()
+    {
+        MethodInfo? method = typeof(EventDetailViewModel).GetMethod("BuildEventJson", BindingFlags.Public | BindingFlags.Static);
+        Assert.NotNull(method);
+        Assert.Equal(typeof(string), method.ReturnType);
+
+        using var doc = JsonDocument.Parse(EventDetailViewModel.BuildEventJson(CreateFullJsonDetail()));
+        JsonElement root = doc.RootElement;
+
+        Assert.Equal(1200, root.GetProperty("expectedAtendees").GetInt32());
+        Assert.False(root.TryGetProperty("expectedAttendees", out _));
+        Assert.False(root.TryGetProperty("ExpectedAtendees", out _));
+    }
+
+    // QC16: the date is exactly ISO 8601 UTC, with no fractional seconds and a Z offset.
+    [Fact]
+    public void BuildEventJson_WritesTheDateExactly_WithNoFractionAndAZOffset()
+    {
+        using var doc = JsonDocument.Parse(EventDetailViewModel.BuildEventJson(CreateFullJsonDetail()));
+        string value = doc.RootElement.GetProperty("startDateUtc").GetString()!;
+
+        Assert.Matches(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$", value);
+        Assert.Equal("2030-05-01T18:30:00Z", value);
+    }
+
 
     [Fact]
     public void Project_ReferencesNewtonsoftJson_AtExactlyVersion12_0_3()
