@@ -17,7 +17,9 @@ public class EventDetailViewModelTests
         _navMock.Setup(n => n.PushEditEventModalAsync(It.IsAny<EventDetail>(), It.IsAny<Func<Task>>())).Returns(Task.CompletedTask);
     }
 
-    private EventDetailViewModel CreateSut() => new(_eventsMock.Object, _navMock.Object);
+    private readonly Mock<IShareService> _shareMock = new();
+
+    private EventDetailViewModel CreateSut() => new(_eventsMock.Object, _navMock.Object, _shareMock.Object);
 
     private static EventDetail CreateDetail() => new()
     {
@@ -874,6 +876,181 @@ public class EventDetailViewModelTests
 
         Assert.False(sut.IsLoadError);
         Assert.NotNull(sut.Detail);
+    }
+
+    // ── Share ─────────────────────────────────────────────────────────────────
+
+    private async Task<(string Title, string Text)> ShareAndCaptureAsync(EventDetail detail)
+    {
+        string? title = null, text = null;
+        _shareMock
+            .Setup(s => s.ShareTextAsync(It.IsAny<string>(), It.IsAny<string>()))
+            .Callback<string, string>((t, x) => { title = t; text = x; })
+            .Returns(Task.CompletedTask);
+        EventDetailViewModel sut = CreateLoadedSut(detail);
+
+        await sut.ShareCommand.ExecuteAsync(null);
+
+        return (title!, text!);
+    }
+
+    [Fact]
+    public async Task ShareCommand_CallsShareServiceOnceWithEventNameAsTitle()
+    {
+        (string title, _) = await ShareAndCaptureAsync(CreateDetail());
+
+        Assert.Equal("Aurora Night Market", title);
+        _shareMock.Verify(s => s.ShareTextAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ShareCommand_SharesFiveLinesInOrder()
+    {
+        (_, string text) = await ShareAndCaptureAsync(CreateDetail());
+
+        Assert.Equal(
+            ["Aurora Night Market", "Canal Yard", "2030-06-01T11:00:00Z", "2030-06-01T11:30:00Z", "BK-0500"],
+            text.Split('\n'));
+    }
+
+    [Fact]
+    public async Task ShareCommand_ExcludesOtherFields_AndUsesRawBookingReference()
+    {
+        EventDetail detail = CreateDetail();
+        detail.BookingReference = "vno7k2x9q4";
+
+        (_, string text) = await ShareAndCaptureAsync(detail);
+
+        Assert.DoesNotContain("3 Example Quay", text);
+        Assert.DoesNotContain("Fictional street food", text);
+        Assert.DoesNotContain("Night Markets Ltd", text);
+        Assert.DoesNotContain("example.invalid", text);
+        Assert.DoesNotContain("food", text);
+        Assert.DoesNotContain("music", text);
+        Assert.Equal("vno7k2x9q4", text.Split('\n')[4]);
+    }
+
+    [Theory]
+    [InlineData(DateTimeKind.Local)]
+    [InlineData(DateTimeKind.Unspecified)]
+    public async Task ShareCommand_FormatsDatesInInvariantUtcFormat_WhateverTheCultureOrKind(DateTimeKind kind)
+    {
+        CultureInfo original = CultureInfo.CurrentCulture;
+        CultureInfo.CurrentCulture = new CultureInfo("ar-SA");
+        try
+        {
+            EventDetail detail = CreateDetail();
+            detail.StartDateUtc = new DateTime(2030, 6, 1, 11, 0, 0, kind);
+            detail.EndDateUtc = new DateTime(2030, 6, 2, 9, 5, 7, kind);
+
+            (_, string text) = await ShareAndCaptureAsync(detail);
+
+            string[] lines = text.Split('\n');
+            Assert.Equal("2030-06-01T11:00:00Z", lines[2]);
+            Assert.Equal("2030-06-02T09:05:07Z", lines[3]);
+        }
+        finally { CultureInfo.CurrentCulture = original; }
+    }
+
+    [Fact]
+    public async Task ShareCommand_KeepsFiveLines_WhenOptionalFieldsAreEmpty()
+    {
+        EventDetail detail = CreateDetail();
+        detail.VenueName = string.Empty;
+        detail.BookingReference = string.Empty;
+
+        (_, string text) = await ShareAndCaptureAsync(detail);
+
+        Assert.Equal(
+            ["Aurora Night Market", "", "2030-06-01T11:00:00Z", "2030-06-01T11:30:00Z", ""],
+            text.Split('\n'));
+    }
+
+    [Fact]
+    public async Task ShareCommand_CannotExecute_UntilAnEventIsLoaded()
+    {
+        EventDetailViewModel sut = CreateSut();
+        Assert.False(sut.ShareCommand.CanExecute(null));
+
+        TaskCompletionSource<EventDetail?> tcs = new();
+        _eventsMock
+            .Setup(e => e.GetEventDetailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns(tcs.Task);
+        sut.ApplyQueryAttributes(new Dictionary<string, object> { ["id"] = "evt-500" });
+        Task loading = sut.InitializeAsync();
+        Assert.False(sut.ShareCommand.CanExecute(null));
+
+        tcs.SetResult(CreateDetail());
+        await loading;
+        Assert.True(sut.ShareCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task ShareCommand_CannotExecute_AfterFailedLoad()
+    {
+        SetupDetail(null);
+        EventDetailViewModel sut = CreateSut();
+        sut.ApplyQueryAttributes(new Dictionary<string, object> { ["id"] = "evt-500" });
+        await sut.InitializeAsync();
+        Assert.False(sut.ShareCommand.CanExecute(null));
+
+        _eventsMock
+            .Setup(e => e.GetEventDetailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new HttpRequestException("offline"));
+        await sut.InitializeAsync();
+        Assert.False(sut.ShareCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void ShareCommand_RaisesCanExecuteChanged_WhenDetailChanges()
+    {
+        EventDetailViewModel sut = CreateSut();
+        int raised = 0;
+        sut.ShareCommand.CanExecuteChanged += (_, _) => raised++;
+
+        sut.Detail = CreateDetail();
+        Assert.Equal(1, raised);
+
+        sut.Detail = null;
+        Assert.Equal(2, raised);
+    }
+
+    [Fact]
+    public async Task ShareCommand_SwallowsShareFailure_AndLeavesStateUnchanged()
+    {
+        _shareMock
+            .Setup(s => s.ShareTextAsync(It.IsAny<string>(), It.IsAny<string>()))
+            .ThrowsAsync(new InvalidOperationException("share failed"));
+        EventDetail detail = CreateDetail();
+        EventDetailViewModel sut = CreateLoadedSut(detail);
+
+        Exception? ex = await Record.ExceptionAsync(() => sut.ShareCommand.ExecuteAsync(null));
+
+        Assert.Null(ex);
+        Assert.Same(detail, sut.Detail);
+        Assert.False(sut.IsLoadError);
+        Assert.False(sut.IsBusy);
+    }
+
+    [Fact]
+    public async Task ShareCommand_SwallowsCancellation()
+    {
+        _shareMock
+            .Setup(s => s.ShareTextAsync(It.IsAny<string>(), It.IsAny<string>()))
+            .ThrowsAsync(new OperationCanceledException());
+        EventDetailViewModel sut = CreateLoadedSut(CreateDetail());
+
+        Exception? ex = await Record.ExceptionAsync(() => sut.ShareCommand.ExecuteAsync(null));
+
+        Assert.Null(ex);
+    }
+
+    [Fact]
+    public async Task ShareCommand_DoesNotCallShareService_WhenNoEventIsLoaded()
+    {
+        await CreateSut().ShareCommand.ExecuteAsync(null);
+
+        _shareMock.Verify(s => s.ShareTextAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
     }
 
     // ── Commands ──────────────────────────────────────────────────────────────
