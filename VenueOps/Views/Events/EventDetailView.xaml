@@ -296,8 +296,8 @@
                                     </Grid>
                                     <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12" Margin="0,0,0,10">
                                         <Label Grid.Column="0" Text="{Binding AttendeesLabel}" Style="{StaticResource DetailKey}"/>
-                                        <Label Grid.Column="1" Text="{Binding AttendeesDisplay}" Style="{StaticResource DetailValue}"/>
-                                        <Label Grid.Column="1" Grid.Row="1" Text="{Binding AttendanceText}" IsVisible="{Binding HasAttendance}" Style="{StaticResource DetailValue}"/>
+                                        <VerticalStackLayout Grid.Column="1" Spacing="0"><Label Text="{Binding AttendeesDisplay}" Style="{StaticResource DetailValue}"/>
+                                        <Label Text="{Binding AttendanceText}" IsVisible="{Binding HasAttendance}" Style="{StaticResource DetailValue}"/></VerticalStackLayout>
                                     </Grid>
                                     <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12" IsVisible="{Binding HasBookingReference}">
                                         <Label Grid.Column="0" Text="Booking Ref" Style="{StaticResource DetailKey}" IsVisible="{Binding HasBookingReference}"/>
