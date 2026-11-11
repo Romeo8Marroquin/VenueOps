@@ -1053,6 +1053,419 @@ public class EventDetailViewModelTests
         _shareMock.Verify(s => s.ShareTextAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
     }
 
+    private const string UtcStampPattern = "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$";
+
+    private List<(string Title, string Text)> CaptureShareCalls()
+    {
+        List<(string Title, string Text)> calls = [];
+        _shareMock
+            .Setup(s => s.ShareTextAsync(It.IsAny<string>(), It.IsAny<string>()))
+            .Callback<string, string>((t, x) => calls.Add((t, x)))
+            .Returns(Task.CompletedTask);
+        return calls;
+    }
+
+    [Fact]
+    public async Task ShareCommand_CallsShareWithTheNewEvent_AfterTheLoadedEventIsReplaced()
+    {
+        EventDetail eventB = CreateDetail();
+        eventB.EventName = "Harbour Lantern Walk";
+        eventB.VenueName = "Quay Hall";
+        eventB.StartDateUtc = new DateTime(2030, 7, 2, 19, 0, 0, DateTimeKind.Utc);
+        eventB.EndDateUtc = new DateTime(2030, 7, 2, 20, 15, 0, DateTimeKind.Utc);
+        eventB.BookingReference = "BK-0777";
+        List<(string Title, string Text)> calls = CaptureShareCalls();
+        EventDetailViewModel sut = CreateLoadedSut(CreateDetail());
+        sut.Detail = eventB;
+
+        await sut.ShareCommand.ExecuteAsync(null);
+
+        Assert.Single(calls);
+        Assert.Equal("Harbour Lantern Walk", calls[0].Title);
+        Assert.Equal(
+            ["Harbour Lantern Walk", "Quay Hall", "2030-07-02T19:00:00Z", "2030-07-02T20:15:00Z", "BK-0777"],
+            calls[0].Text.Split('\n'));
+    }
+
+    [Fact]
+    public async Task ShareCommand_CalledTwiceInARow_CallsTheServiceTwice()
+    {
+        List<(string Title, string Text)> calls = CaptureShareCalls();
+        EventDetailViewModel sut = CreateLoadedSut(CreateDetail());
+
+        Exception? ex = await Record.ExceptionAsync(async () =>
+        {
+            await sut.ShareCommand.ExecuteAsync(null);
+            await sut.ShareCommand.ExecuteAsync(null);
+        });
+
+        Assert.Null(ex);
+        Assert.Equal(2, calls.Count);
+        Assert.All(calls, c => Assert.Equal("Aurora Night Market", c.Title));
+    }
+
+    [Fact]
+    public async Task ShareCommand_TextIsExactlyTheFiveLines_WhenEventHasAddressDescriptionOrganizerAndLinks()
+    {
+        List<(string Title, string Text)> calls = CaptureShareCalls();
+        EventDetail detail = CreateDetail(); // carries an address, description, organizer, website, tags and links
+
+        await CreateLoadedSut(detail).ShareCommand.ExecuteAsync(null);
+
+        Assert.Equal(
+            "Aurora Night Market\nCanal Yard\n2030-06-01T11:00:00Z\n2030-06-01T11:30:00Z\nBK-0500",
+            calls.Single().Text);
+    }
+
+    [Fact]
+    public async Task ShareCommand_WritesUtcStampsWithAsciiDigits_InAnArabicCulture()
+    {
+        CultureInfo original = CultureInfo.CurrentCulture;
+        CultureInfo.CurrentCulture = new CultureInfo("ar-SA");
+        try
+        {
+            List<(string Title, string Text)> calls = CaptureShareCalls();
+            EventDetail detail = CreateDetail();
+            detail.StartDateUtc = new DateTime(2030, 6, 1, 9, 5, 7, DateTimeKind.Utc);
+            detail.EndDateUtc = new DateTime(2030, 6, 2, 9, 5, 7, DateTimeKind.Utc);
+
+            await CreateLoadedSut(detail).ShareCommand.ExecuteAsync(null);
+
+            string[] lines = calls.Single().Text.Split('\n');
+            Assert.Equal("2030-06-01T09:05:07Z", lines[2]);
+            Assert.Equal("2030-06-02T09:05:07Z", lines[3]);
+            Assert.Matches(UtcStampPattern, lines[2]);
+            Assert.Matches(UtcStampPattern, lines[3]);
+        }
+        finally { CultureInfo.CurrentCulture = original; }
+    }
+
+    [Fact]
+    public async Task ShareCommand_WritesTheUtcValues_NotLocalTime_AroundMidnight()
+    {
+        List<(string Title, string Text)> calls = CaptureShareCalls();
+        EventDetail detail = CreateDetail();
+        detail.StartDateUtc = new DateTime(2030, 6, 1, 23, 30, 0, DateTimeKind.Utc);
+        detail.EndDateUtc = new DateTime(2030, 6, 1, 23, 45, 0, DateTimeKind.Utc);
+
+        await CreateLoadedSut(detail).ShareCommand.ExecuteAsync(null);
+
+        Assert.Equal(
+            ["Aurora Night Market", "Canal Yard", "2030-06-01T23:30:00Z", "2030-06-01T23:45:00Z", "BK-0500"],
+            calls.Single().Text.Split('\n'));
+    }
+
+    [Theory]
+    [InlineData(DateTimeKind.Local)]
+    [InlineData(DateTimeKind.Unspecified)]
+    public async Task ShareCommand_WritesStampsInTheCriterionFormat_ForLocalAndUnspecifiedKinds(DateTimeKind kind)
+    {
+        // Which instant a Local or Unspecified value stands for is not decided here; only the shape is.
+        List<(string Title, string Text)> calls = CaptureShareCalls();
+        EventDetail detail = CreateDetail();
+        detail.StartDateUtc = new DateTime(2030, 6, 1, 11, 0, 0, kind);
+        detail.EndDateUtc = new DateTime(2030, 6, 1, 11, 30, 0, kind);
+
+        await CreateLoadedSut(detail).ShareCommand.ExecuteAsync(null);
+
+        string[] lines = calls.Single().Text.Split('\n');
+        Assert.Matches(UtcStampPattern, lines[2]);
+        Assert.Matches(UtcStampPattern, lines[3]);
+    }
+
+    [Theory]
+    [InlineData("Aurora\nNight Market", "Canal\r\nYard")]
+    [InlineData("Aurora\rNight Market", "Canal\nYard")]
+    [InlineData("Aurora\r\nNight Market", "Canal\rYard")]
+    public async Task ShareCommand_KeepsFiveLines_WhenEventNameOrVenueContainsLineBreaks(string eventName, string venueName)
+    {
+        List<(string Title, string Text)> calls = CaptureShareCalls();
+        EventDetail detail = CreateDetail();
+        detail.EventName = eventName;
+        detail.VenueName = venueName;
+
+        await CreateLoadedSut(detail).ShareCommand.ExecuteAsync(null);
+
+        string[] lines = calls.Single().Text.Split('\n');
+        Assert.Equal(5, lines.Length);
+        Assert.Equal("Aurora Night Market", lines[0]);
+        Assert.Equal("Canal Yard", lines[1]);
+        Assert.Equal("2030-06-01T11:00:00Z", lines[2]);
+        Assert.Equal("2030-06-01T11:30:00Z", lines[3]);
+        Assert.Equal("BK-0500", lines[4]);
+    }
+
+    [Fact]
+    public async Task ShareCommand_WritesEmptyLines_ForNullVenueAndBookingReference_WithoutThrowing()
+    {
+        List<(string Title, string Text)> calls = CaptureShareCalls();
+        EventDetail detail = CreateDetail();
+        detail.VenueName = null!;
+        detail.BookingReference = null!;
+        detail.Location = null;
+        detail.Organizer = null;
+
+        Exception? ex = await Record.ExceptionAsync(() => CreateLoadedSut(detail).ShareCommand.ExecuteAsync(null));
+
+        Assert.Null(ex);
+        Assert.Equal(
+            ["Aurora Night Market", "", "2030-06-01T11:00:00Z", "2030-06-01T11:30:00Z", ""],
+            calls.Single().Text.Split('\n'));
+    }
+
+    [Fact]
+    public async Task ShareCommand_KeepsFiveLines_ForWhitespaceOnlyVenueAndBookingReference()
+    {
+        List<(string Title, string Text)> calls = CaptureShareCalls();
+        EventDetail detail = CreateDetail();
+        detail.VenueName = "   ";
+        detail.BookingReference = "   ";
+
+        await CreateLoadedSut(detail).ShareCommand.ExecuteAsync(null);
+
+        // The spaces on the optional lines are not fixed by the criterion: only the line count,
+        // the order, and the fixed lines are asserted.
+        string[] lines = calls.Single().Text.Split('\n');
+        Assert.Equal(5, lines.Length);
+        Assert.Equal("Aurora Night Market", lines[0]);
+        Assert.True(string.IsNullOrWhiteSpace(lines[1]));
+        Assert.Equal("2030-06-01T11:00:00Z", lines[2]);
+        Assert.Equal("2030-06-01T11:30:00Z", lines[3]);
+        Assert.True(string.IsNullOrWhiteSpace(lines[4]));
+    }
+
+    [Fact]
+    public async Task ShareCommand_CannotExecute_AfterLoadThrows()
+    {
+        _eventsMock
+            .Setup(e => e.GetEventDetailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new HttpRequestException("offline"));
+        EventDetailViewModel sut = CreateSut();
+        sut.ApplyQueryAttributes(new Dictionary<string, object> { ["id"] = "evt-500" });
+
+        await sut.InitializeAsync();
+
+        Assert.True(sut.IsLoadError);
+        Assert.False(sut.ShareCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task ShareCommand_CannotExecute_WhileReloading_AndAfterTheReloadFails()
+    {
+        SetupDetail(CreateDetail());
+        EventDetailViewModel sut = CreateSut();
+        sut.ApplyQueryAttributes(new Dictionary<string, object> { ["id"] = "evt-500" });
+        await sut.InitializeAsync();
+        Assert.True(sut.ShareCommand.CanExecute(null));
+
+        TaskCompletionSource<EventDetail?> reload = new();
+        _eventsMock
+            .Setup(e => e.GetEventDetailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns(reload.Task);
+        Task pending = sut.InitializeAsync();
+        Assert.False(sut.ShareCommand.CanExecute(null));
+
+        reload.SetException(new HttpRequestException("offline"));
+        await pending;
+
+        Assert.True(sut.IsLoadError);
+        Assert.False(sut.ShareCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void ShareCommand_RaisesCanExecuteChanged_AndReportsTrueThenFalse()
+    {
+        EventDetailViewModel sut = CreateSut();
+        List<bool> observed = [];
+        sut.ShareCommand.CanExecuteChanged += (_, _) => observed.Add(sut.ShareCommand.CanExecute(null));
+
+        sut.Detail = CreateDetail();
+        sut.Detail = null;
+
+        Assert.Equal(new[] { true, false }, observed);
+    }
+
+    public static TheoryData<bool, Type> CancellationForms => new()
+    {
+        { false, typeof(OperationCanceledException) },
+        { false, typeof(TaskCanceledException) },
+        { true, typeof(OperationCanceledException) }
+    };
+
+    [Theory]
+    [MemberData(nameof(CancellationForms))]
+    public async Task ShareCommand_SwallowsEveryCancellationForm_AndLeavesStateUnchanged(bool throwsSynchronously, Type exceptionType)
+    {
+        Exception exception = (Exception)Activator.CreateInstance(exceptionType)!;
+        if (throwsSynchronously)
+            _shareMock.Setup(s => s.ShareTextAsync(It.IsAny<string>(), It.IsAny<string>())).Throws(exception);
+        else
+            _shareMock.Setup(s => s.ShareTextAsync(It.IsAny<string>(), It.IsAny<string>())).ThrowsAsync(exception);
+        EventDetail detail = CreateDetail();
+        EventDetailViewModel sut = CreateLoadedSut(detail);
+
+        Exception? ex = await Record.ExceptionAsync(() => sut.ShareCommand.ExecuteAsync(null));
+
+        Assert.Null(ex);
+        Assert.Same(detail, sut.Detail);
+        Assert.False(sut.IsLoadError);
+        Assert.False(sut.IsBusy);
+    }
+
+    [Fact]
+    public async Task ShareCommand_ShowsNothingAndRaisesNoError_WhenTheShareRequestFails()
+    {
+        _shareMock
+            .Setup(s => s.ShareTextAsync(It.IsAny<string>(), It.IsAny<string>()))
+            .ThrowsAsync(new InvalidOperationException("share failed"));
+        EventDetailViewModel sut = CreateLoadedSut(CreateDetail());
+        List<string?> changed = [];
+        sut.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+
+        Exception? ex = await Record.ExceptionAsync(() => sut.ShareCommand.ExecuteAsync(null));
+
+        Assert.Null(ex);
+        Assert.DoesNotContain(nameof(EventDetailViewModel.IsBusy), changed);
+        Assert.DoesNotContain(nameof(EventDetailViewModel.IsLoadError), changed);
+        _navMock.VerifyNoOtherCalls();
+        _eventsMock.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task ShareCommand_ShowsNothingAndNavigatesNowhere_AfterASuccessfulShare()
+    {
+        CaptureShareCalls();
+        EventDetailViewModel sut = CreateLoadedSut(CreateDetail());
+        List<string?> changed = [];
+        sut.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+
+        await sut.ShareCommand.ExecuteAsync(null);
+
+        Assert.Empty(changed);
+        _navMock.VerifyNoOtherCalls();
+        _eventsMock.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task ShareCommand_KeepsBusyAndErrorFlagsAsTheyWere_WhenTheShareRequestFails()
+    {
+        _shareMock
+            .Setup(s => s.ShareTextAsync(It.IsAny<string>(), It.IsAny<string>()))
+            .ThrowsAsync(new InvalidOperationException("share failed"));
+        EventDetail detail = CreateDetail();
+        EventDetailViewModel sut = CreateLoadedSut(detail);
+        sut.IsBusy = true;
+        sut.IsLoadError = true;
+
+        await sut.ShareCommand.ExecuteAsync(null);
+
+        Assert.Same(detail, sut.Detail);
+        Assert.True(sut.IsLoadError);
+        Assert.True(sut.IsBusy);
+    }
+
+    [Fact]
+    public async Task ShareCommand_StaysUsable_AfterAFailedShare()
+    {
+        int calls = 0;
+        _shareMock
+            .Setup(s => s.ShareTextAsync(It.IsAny<string>(), It.IsAny<string>()))
+            .Returns(() => ++calls == 1
+                ? Task.FromException(new InvalidOperationException("share failed"))
+                : Task.CompletedTask);
+        EventDetailViewModel sut = CreateLoadedSut(CreateDetail());
+
+        await sut.ShareCommand.ExecuteAsync(null);
+        Exception? ex = await Record.ExceptionAsync(() => sut.ShareCommand.ExecuteAsync(null));
+
+        Assert.Null(ex);
+        Assert.True(sut.ShareCommand.CanExecute(null));
+        _shareMock.Verify(s => s.ShareTextAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Exactly(2));
+    }
+
+    [Fact]
+    public async Task ShareCommand_SeparatesLinesWithLineFeedOnly()
+    {
+        List<(string Title, string Text)> calls = CaptureShareCalls();
+
+        await CreateLoadedSut(CreateDetail()).ShareCommand.ExecuteAsync(null);
+
+        string text = calls.Single().Text;
+        Assert.DoesNotContain("\r", text);
+        Assert.Equal(4, text.Count(c => c == '\n'));
+    }
+
+    [Fact]
+    public async Task ShareCommand_FormatsUtcKindDates_AsTheSameUtcStamps_InAnArabicCulture()
+    {
+        CultureInfo original = CultureInfo.CurrentCulture;
+        CultureInfo.CurrentCulture = new CultureInfo("ar-SA");
+        try
+        {
+            List<(string Title, string Text)> calls = CaptureShareCalls();
+            EventDetail detail = CreateDetail();
+            detail.StartDateUtc = new DateTime(2030, 6, 1, 11, 0, 0, DateTimeKind.Utc);
+            detail.EndDateUtc = new DateTime(2030, 6, 2, 9, 5, 7, DateTimeKind.Utc);
+
+            await CreateLoadedSut(detail).ShareCommand.ExecuteAsync(null);
+
+            string[] lines = calls.Single().Text.Split('\n');
+            Assert.Equal("2030-06-01T11:00:00Z", lines[2]);
+            Assert.Equal("2030-06-02T09:05:07Z", lines[3]);
+        }
+        finally { CultureInfo.CurrentCulture = original; }
+    }
+
+    [Fact]
+    public async Task ShareCommand_ReplacesLineBreakInBookingReferenceWithASpace()
+    {
+        List<(string Title, string Text)> calls = CaptureShareCalls();
+        EventDetail detail = CreateDetail();
+        detail.BookingReference = "BK\n0500";
+
+        await CreateLoadedSut(detail).ShareCommand.ExecuteAsync(null);
+
+        string[] lines = calls.Single().Text.Split('\n');
+        Assert.Equal(5, lines.Length);
+        Assert.Equal("BK 0500", lines[4]);
+    }
+
+    [Fact]
+    public void ShareCommand_CannotExecute_WhileBusyOrAfterALoadError_EvenWhenDetailIsSet()
+    {
+        EventDetailViewModel sut = CreateLoadedSut(CreateDetail());
+        Assert.True(sut.ShareCommand.CanExecute(null));
+
+        sut.IsBusy = true;
+        Assert.False(sut.ShareCommand.CanExecute(null));
+
+        sut.IsBusy = false;
+        sut.IsLoadError = true;
+        Assert.False(sut.ShareCommand.CanExecute(null));
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task ShareCommand_SwallowsInvalidOperation_WhetherThrownSynchronouslyOrAsynchronously(bool throwsSynchronously)
+    {
+        InvalidOperationException failure = new("share failed");
+        if (throwsSynchronously)
+            _shareMock.Setup(s => s.ShareTextAsync(It.IsAny<string>(), It.IsAny<string>())).Throws(failure);
+        else
+            _shareMock.Setup(s => s.ShareTextAsync(It.IsAny<string>(), It.IsAny<string>())).ThrowsAsync(failure);
+        EventDetail detail = CreateDetail();
+        EventDetailViewModel sut = CreateLoadedSut(detail);
+
+        Exception? ex = await Record.ExceptionAsync(() => sut.ShareCommand.ExecuteAsync(null));
+
+        Assert.Null(ex);
+        Assert.Same(detail, sut.Detail);
+        Assert.False(sut.IsLoadError);
+        Assert.False(sut.IsBusy);
+        _navMock.VerifyNoOtherCalls();
+    }
+
     // ── Commands ──────────────────────────────────────────────────────────────
 
     [Fact]
