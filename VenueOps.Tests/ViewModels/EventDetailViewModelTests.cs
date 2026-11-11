@@ -895,6 +895,201 @@ public class EventDetailViewModelTests
         finally { CultureInfo.CurrentCulture = original; }
     }
 
+    private static EventDetail DetailWithAttendance(int attendees, int expected)
+    {
+        EventDetail detail = CreateDetail();
+        detail.AttendeeCount = attendees;
+        detail.ExpectedAtendees = expected;
+        return detail;
+    }
+
+    [Fact]
+    public void AttendanceText_RoundsDownNotToNearest_AcrossDetailChanges()
+    {
+        EventDetailViewModel sut = CreateSutWithAttendance(1, 3);
+        Assert.Equal("Attendance: 33% of expected", sut.AttendanceText);
+
+        sut.Detail = DetailWithAttendance(399, 400);
+        Assert.Equal("Attendance: 99% of expected", sut.AttendanceText);
+
+        sut.Detail = DetailWithAttendance(2, 3);
+        Assert.Equal("Attendance: 66% of expected", sut.AttendanceText);
+    }
+
+    [Fact]
+    public void AttendanceText_ShowsZeroPercent_WhenNoAttendeesAndExpectedIsPositive()
+    {
+        EventDetailViewModel sut = CreateSutWithAttendance(0, 400);
+
+        Assert.Equal("Attendance: 0% of expected", sut.AttendanceText);
+        Assert.True(sut.HasAttendance);
+    }
+
+    [Fact]
+    public void AttendanceText_IsOneHundredThenZero_WhenExpectedIsOne()
+    {
+        EventDetailViewModel sut = CreateSutWithAttendance(1, 1);
+
+        Assert.Equal("Attendance: 100% of expected", sut.AttendanceText);
+        Assert.True(sut.HasAttendance);
+
+        sut.Detail = DetailWithAttendance(0, 1);
+
+        Assert.Equal("Attendance: 0% of expected", sut.AttendanceText);
+        Assert.True(sut.HasAttendance);
+    }
+
+    [Fact]
+    public void AttendanceText_DoesNotOverflow_ForLargeCounts()
+    {
+        EventDetailViewModel sut = CreateSutWithAttendance(int.MaxValue, int.MaxValue);
+
+        Assert.Equal("Attendance: 100% of expected", sut.AttendanceText);
+
+        sut.Detail = DetailWithAttendance(100000000, 1);
+
+        Assert.Equal("Attendance: 10000000000% of expected", sut.AttendanceText);
+        Assert.True(sut.HasAttendance);
+    }
+
+    [Theory]
+    [InlineData("confirmed")]
+    [InlineData("draft")]
+    [InlineData("completed")]
+    [InlineData("cancelled")]
+    public void AttendanceText_IsTheSameForEveryStatus_WithWesternDigitsInArabicCulture(string status)
+    {
+        EventDetail detail = DetailWithAttendance(300, 400);
+        detail.Status = status;
+        CultureInfo original = CultureInfo.CurrentCulture;
+        CultureInfo.CurrentCulture = new CultureInfo("ar-SA");
+        try
+        {
+            EventDetailViewModel sut = CreateLoadedSut(detail);
+
+            Assert.Equal("Attendance: 75% of expected", sut.AttendanceText);
+        }
+        finally { CultureInfo.CurrentCulture = original; }
+    }
+
+    [Fact]
+    public void AttendanceText_IsNotCapped_WhenOneOverAndDoubleExpected()
+    {
+        EventDetailViewModel sut = CreateSutWithAttendance(401, 400);
+
+        Assert.Equal("Attendance: 100% of expected", sut.AttendanceText);
+
+        sut.Detail = DetailWithAttendance(800, 400);
+
+        Assert.Equal("Attendance: 200% of expected", sut.AttendanceText);
+        Assert.True(sut.HasAttendance);
+    }
+
+    [Fact]
+    public void AttendanceText_IsEmptyAndHidden_WhenExpectedIsNegativeOrIntMinValue()
+    {
+        EventDetailViewModel sut = CreateSutWithAttendance(10, -5);
+
+        Assert.Equal(string.Empty, sut.AttendanceText);
+        Assert.False(sut.HasAttendance);
+
+        sut.Detail = DetailWithAttendance(10, int.MinValue);
+
+        Assert.Equal(string.Empty, sut.AttendanceText);
+        Assert.False(sut.HasAttendance);
+    }
+
+    [Fact]
+    public async Task AttendanceText_IsCleared_WhenServiceThrowsAfterAValidLoad()
+    {
+        SetupDetail(DetailWithAttendance(300, 400));
+        EventDetailViewModel sut = CreateSut();
+        sut.ApplyQueryAttributes(new Dictionary<string, object> { ["id"] = "evt-500" });
+        await sut.InitializeAsync();
+        Assert.Equal("Attendance: 75% of expected", sut.AttendanceText);
+
+        _eventsMock
+            .Setup(e => e.GetEventDetailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new HttpRequestException("offline"));
+        await sut.InitializeAsync();
+
+        Assert.Null(sut.Detail);
+        Assert.Equal(string.Empty, sut.AttendanceText);
+        Assert.False(sut.HasAttendance);
+    }
+
+    [Fact]
+    public void AttendanceText_IsCleared_WhenDetailIsSetToNullAfterAValidEvent()
+    {
+        EventDetailViewModel sut = CreateSutWithAttendance(300, 400);
+        Assert.Equal("Attendance: 75% of expected", sut.AttendanceText);
+
+        sut.Detail = null;
+
+        Assert.Equal(string.Empty, sut.AttendanceText);
+        Assert.False(sut.HasAttendance);
+    }
+
+    [Fact]
+    public void AttendanceText_IsRefreshedAndNotified_OnEveryDetailReplacement()
+    {
+        EventDetailViewModel sut = CreateSutWithAttendance(300, 400);
+        List<string?> raised = [];
+        sut.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+
+        sut.Detail = DetailWithAttendance(480, 400);
+
+        Assert.Contains(nameof(EventDetailViewModel.AttendanceText), raised);
+        Assert.Equal("Attendance: 120% of expected", sut.AttendanceText);
+
+        raised.Clear();
+        sut.Detail = DetailWithAttendance(10, 0);
+
+        Assert.Contains(nameof(EventDetailViewModel.AttendanceText), raised);
+        Assert.Equal(string.Empty, sut.AttendanceText);
+        Assert.False(sut.HasAttendance);
+
+        raised.Clear();
+        sut.Detail = null;
+
+        Assert.Contains(nameof(EventDetailViewModel.AttendanceText), raised);
+        Assert.Equal(string.Empty, sut.AttendanceText);
+        Assert.False(sut.HasAttendance);
+    }
+
+    [Fact]
+    public async Task AttendanceText_IsRefreshed_OnEachInitializeAsyncReload()
+    {
+        SetupDetail(DetailWithAttendance(300, 400));
+        EventDetailViewModel sut = CreateSut();
+        sut.ApplyQueryAttributes(new Dictionary<string, object> { ["id"] = "evt-500" });
+        await sut.InitializeAsync();
+
+        Assert.Equal("Attendance: 75% of expected", sut.AttendanceText);
+
+        SetupDetail(DetailWithAttendance(480, 400));
+        await sut.InitializeAsync();
+
+        Assert.Equal("Attendance: 120% of expected", sut.AttendanceText);
+    }
+
+    [Fact]
+    public void AttendanceText_ReadsTheSameInstanceCounts_WithoutANotification_WhenDetailIsMutatedInPlace()
+    {
+        // Characterization for review: the criteria do not say whether an in-place change to the
+        // same EventDetail should refresh the text. The value is computed on read, so it follows
+        // the counts, but no PropertyChanged is raised for AttendanceText.
+        EventDetail detail = DetailWithAttendance(300, 400);
+        EventDetailViewModel sut = CreateLoadedSut(detail);
+        List<string?> raised = [];
+        sut.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+
+        detail.AttendeeCount = 400;
+
+        Assert.Equal("Attendance: 100% of expected", sut.AttendanceText);
+        Assert.DoesNotContain(nameof(EventDetailViewModel.AttendanceText), raised);
+    }
+
     // ── Query attributes + InitializeAsync ────────────────────────────────────
 
     [Fact]
