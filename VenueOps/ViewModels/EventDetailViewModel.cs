@@ -11,6 +11,7 @@ public partial class EventDetailViewModel : BaseViewModel, IQueryAttributable
 {
     private readonly IEventsService     _eventsService;
     private readonly INavigationService _navigationService;
+    private readonly IShareService     _shareService;
     private string _eventId = string.Empty;
 
     // ── Layout ────────────────────────────────────────────────────────────
@@ -190,10 +191,11 @@ public partial class EventDetailViewModel : BaseViewModel, IQueryAttributable
 
     // ── Constructor ───────────────────────────────────────────────────────
 
-    public EventDetailViewModel(IEventsService eventsService, INavigationService navigationService)
+    public EventDetailViewModel(IEventsService eventsService, INavigationService navigationService, IShareService shareService)
     {
         _eventsService     = eventsService;
         _navigationService = navigationService;
+        _shareService      = shareService;
         Title = "Event Detail";
     }
 
@@ -254,6 +256,36 @@ public partial class EventDetailViewModel : BaseViewModel, IQueryAttributable
     }
 
     // ── Hooks ─────────────────────────────────────────────────────────────
+
+    private bool CanShare() => Detail is not null;
+
+    [RelayCommand(CanExecute = nameof(CanShare))]
+    private async Task ShareAsync()
+    {
+        if (Detail is null) return;
+
+        try
+        {
+            await _shareService.ShareTextAsync(Detail.EventName, BuildShareText(Detail));
+        }
+        catch (Exception)
+        {
+            // Sharing is best effort: a failed or cancelled request shows nothing.
+        }
+    }
+
+    private static string BuildShareText(EventDetail detail)
+    {
+        const string format = "yyyy-MM-dd'T'HH:mm:ss'Z'";
+        return string.Join("\n",
+            detail.EventName ?? string.Empty,
+            detail.VenueName ?? string.Empty,
+            detail.StartDateUtc.ToString(format, CultureInfo.InvariantCulture),
+            detail.EndDateUtc.ToString(format, CultureInfo.InvariantCulture),
+            detail.BookingReference ?? string.Empty);
+    }
+
+    partial void OnDetailChanged(EventDetail? value) => ShareCommand.NotifyCanExecuteChanged();
 
     protected override void OnBusyStateChanged(bool isBusy)
         => OnPropertyChanged(nameof(HasContent));
