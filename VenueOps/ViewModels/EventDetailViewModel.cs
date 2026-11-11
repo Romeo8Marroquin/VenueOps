@@ -280,7 +280,8 @@ public partial class EventDetailViewModel : BaseViewModel, IQueryAttributable
     private Task RetryAsync() => InitializeAsync();
 
     [RelayCommand(CanExecute = nameof(CanCopyAsJson))]
-    private Task CopyAsJsonAsync() => _clipboard.SetTextAsync(BuildEventJson(Detail!));
+    private Task CopyAsJsonAsync() =>
+        Detail is null ? Task.CompletedTask : _clipboard.SetTextAsync(BuildEventJson(Detail));
 
     [RelayCommand]
     private async Task EditEventAsync()
