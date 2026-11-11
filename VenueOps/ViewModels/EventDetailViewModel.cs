@@ -2,6 +2,8 @@ using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
 using VenueOps.Models.Events;
 using VenueOps.Services;
 
@@ -11,6 +13,7 @@ public partial class EventDetailViewModel : BaseViewModel, IQueryAttributable
 {
     private readonly IEventsService     _eventsService;
     private readonly INavigationService _navigationService;
+    private readonly IClipboardService  _clipboard;
     private string _eventId = string.Empty;
 
     // ── Layout ────────────────────────────────────────────────────────────
@@ -190,8 +193,46 @@ public partial class EventDetailViewModel : BaseViewModel, IQueryAttributable
 
     // ── Constructor ───────────────────────────────────────────────────────
 
-    public EventDetailViewModel(IEventsService eventsService, INavigationService navigationService)
+    public static string BuildEventJson(EventDetail detail)
     {
+        var settings = new JsonSerializerSettings
+        {
+            ContractResolver     = new CamelCasePropertyNamesContractResolver(),
+            Formatting           = Formatting.Indented,
+            DateFormatHandling   = DateFormatHandling.IsoDateFormat,
+            DateTimeZoneHandling = DateTimeZoneHandling.Utc,
+            NullValueHandling    = NullValueHandling.Include
+        };
+        settings.Converters.Add(new UtcDateTimeConverter());
+        return JsonConvert.SerializeObject(detail, settings);
+    }
+
+    // Newtonsoft would treat an unspecified date as local time and shift it; the API sends UTC.
+    private sealed class UtcDateTimeConverter : JsonConverter<DateTime>
+    {
+        public override bool CanRead => false;
+
+        public override DateTime ReadJson(
+            JsonReader reader, Type objectType, DateTime existingValue,
+            bool hasExistingValue, JsonSerializer serializer)
+            => throw new NotSupportedException();
+
+        public override void WriteJson(JsonWriter writer, DateTime value, JsonSerializer serializer)
+        {
+            DateTime utc = value.Kind == DateTimeKind.Unspecified
+                ? DateTime.SpecifyKind(value, DateTimeKind.Utc)
+                : value.ToUniversalTime();
+            writer.WriteValue(utc);
+        }
+    }
+
+    private bool CanCopyAsJson() => Detail is not null;
+
+    partial void OnDetailChanged(EventDetail? value) => CopyAsJsonCommand.NotifyCanExecuteChanged();
+
+    public EventDetailViewModel(IEventsService eventsService, INavigationService navigationService, IClipboardService clipboard)
+    {
+        _clipboard         = clipboard;
         _eventsService     = eventsService;
         _navigationService = navigationService;
         Title = "Event Detail";
@@ -237,6 +278,9 @@ public partial class EventDetailViewModel : BaseViewModel, IQueryAttributable
 
     [RelayCommand]
     private Task RetryAsync() => InitializeAsync();
+
+    [RelayCommand(CanExecute = nameof(CanCopyAsJson))]
+    private Task CopyAsJsonAsync() => _clipboard.SetTextAsync(BuildEventJson(Detail!));
 
     [RelayCommand]
     private async Task EditEventAsync()
